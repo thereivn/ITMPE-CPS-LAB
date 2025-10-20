@@ -1,0 +1,467 @@
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from scipy.stats import erlang, norm, uniform, f
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import Pipeline
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+
+# Настройка страницы
+st.set_page_config(
+    page_title="Анализ многомерных характеристик надежности",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# CSS для красивого оформления
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .section-header {
+        font-size: 1.5rem;
+        color: #2e86ab;
+        border-bottom: 2px solid #2e86ab;
+        padding-bottom: 0.5rem;
+        margin-top: 2rem;
+    }
+    .result-card {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        border-left: 5px solid #2e86ab;
+        margin-bottom: 1rem;
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+def generate_reliability_data(alpha, num_samples=1000, random_state=42):
+    """Генерация данных согласно алгоритму из задания"""
+    np.random.seed(random_state)
+    
+    # 1. Генерация ξ ∈ [0,1]
+    xi = np.random.uniform(0, 1, num_samples)
+    
+    # 2. Обратное преобразование для заданных распределений
+    P1_base = uniform.ppf(xi, loc=0, scale=4)          # Равномерное [0,4]
+    P2_base = erlang.ppf(xi, 4, scale=1)               # Эрланга (форма=4, масштаб=1)
+    P3_base = norm.ppf(xi, loc=0, scale=3)             # Нормальное N(0,3)
+    
+    # Расчет σ_i для каждого распределения
+    sigma1 = np.sqrt(4**2 / 12)   # СКО равномерного [0,4]
+    sigma2 = np.sqrt(4 * 1**2)    # СКО распределения Эрланга
+    sigma3 = 3                    # СКО нормального распределения
+    
+    # Добавление погрешности ε_i ~ N(0, α*σ_i)
+    epsilon1 = norm.rvs(loc=0, scale=alpha * sigma1, size=num_samples)
+    epsilon2 = norm.rvs(loc=0, scale=alpha * sigma2, size=num_samples)
+    epsilon3 = norm.rvs(loc=0, scale=alpha * sigma3, size=num_samples)
+    
+    P1 = P1_base + epsilon1
+    P2 = P2_base + epsilon2
+    P3 = P3_base + epsilon3
+    
+    return P1, P2, P3
+
+def f_test_comparison(rss_simple, rss_complex, df_simple, df_complex, n_samples, alpha=0.05):
+    """Критерий Фишера для сравнения моделей"""
+    f_stat = ((rss_simple - rss_complex) / (df_complex - df_simple)) / (rss_complex / (n_samples - df_complex - 1))
+    p_value = 1 - f.cdf(f_stat, df_complex - df_simple, n_samples - df_complex - 1)
+    return f_stat, p_value, p_value < alpha
+
+def select_polynomial_degree(X, y, max_degree=5):
+    """Подбор порядка полинома на основе критерия Фишера"""
+    n_samples = len(y)
+    best_degree = 1
+    models = {}
+    rss_values = {}
+    
+    for degree in range(1, max_degree + 1):
+        model = Pipeline([
+            ('poly', PolynomialFeatures(degree=degree)),
+            ('linear', LinearRegression())
+        ])
+        model.fit(X, y)
+        y_pred = model.predict(X)
+        rss = np.sum((y - y_pred)**2)
+        n_params = PolynomialFeatures(degree=degree).fit_transform(X).shape[1]
+        
+        models[degree] = model
+        rss_values[degree] = (rss, n_params)
+    
+    # Критерий Фишера: последовательное сравнение моделей
+    for degree in range(2, max_degree + 1):
+        rss_prev, df_prev = rss_values[degree-1]
+        rss_curr, df_curr = rss_values[degree]
+        
+        f_stat, p_value, significant = f_test_comparison(
+            rss_prev, rss_curr, df_prev, df_curr, n_samples
+        )
+        
+        if significant:
+            best_degree = degree
+        else:
+            break
+    
+    return best_degree, models[best_degree]
+
+def create_scatter_plotly(P1, P2, P3, alpha, title):
+    """Создание интерактивного поля рассеяния"""
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=P1, y=P2,
+        mode='markers',
+        marker=dict(
+            size=8,
+            color=P3,
+            colorscale='Viridis',
+            showscale=True,
+            colorbar=dict(title="P3")
+        ),
+        hovertemplate=
+        "<b>P1</b>: %{x:.3f}<br>" +
+        "<b>P2</b>: %{y:.3f}<br>" +
+        "<b>P3</b>: %{marker.color:.3f}<br>" +
+        "<extra></extra>"
+    ))
+    
+    fig.update_layout(
+        title=f"{title} (α={alpha})",
+        xaxis_title="P1",
+        yaxis_title="P2",
+        template="plotly_white",
+        height=500
+    )
+    
+    return fig
+
+def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
+    """Создание 3D визуализации регрессионной поверхности"""
+    # Создаем сетку для предсказаний
+    P1_range = np.linspace(P1.min(), P1.max(), 30)
+    P2_range = np.linspace(P2.min(), P2.max(), 30)
+    P1_grid, P2_grid = np.meshgrid(P1_range, P2_range)
+    
+    # Предсказания на сетке
+    grid_points = np.column_stack((P1_grid.ravel(), P2_grid.ravel()))
+    P3_pred_grid = model.predict(grid_points).reshape(P1_grid.shape)
+    
+    fig = go.Figure()
+    
+    # Добавляем исходные точки
+    fig.add_trace(go.Scatter3d(
+        x=P1, y=P2, z=P3,
+        mode='markers',
+        marker=dict(
+            size=4,
+            color=P3,
+            colorscale='Viridis',
+            opacity=0.7
+        ),
+        name='Исходные данные'
+    ))
+    
+    # Добавляем регрессионную поверхность
+    fig.add_trace(go.Surface(
+        x=P1_grid, y=P2_grid, z=P3_pred_grid,
+        colorscale='Plasma',
+        opacity=0.7,
+        name=f'Полином {degree}-й степени'
+    ))
+    
+    fig.update_layout(
+        title=f'Регрессионная модель П₃ = φ(П₁, П₂) (α={alpha}, степень={degree})',
+        scene=dict(
+            xaxis_title='P1',
+            yaxis_title='P2', 
+            zaxis_title='P3'
+        ),
+        height=600
+    )
+    
+    return fig
+
+# Основной интерфейс
+def main():
+    # Заголовок
+    st.markdown('<h1 class="main-header">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
+    
+    # Описание задачи
+    with st.expander("📋 Описание лабораторной работы", expanded=True):
+        st.markdown("""
+        **Цель работы:** Построение многомерной регрессионной зависимости П₃ = φ(П₁, П₂) на основе законов распределения 
+        трех параметров надежности с различной точностью регистрации данных.
+        
+        **Алгоритм:**
+        1. Генерация случайных чисел ξ ∈ [0,1]
+        2. Вычисление параметров через обратное преобразование распределений
+        3. Добавление погрешности измерений ε_i ~ N(0, α·σ_i)
+        4. Построение полей рассеяния и регрессионной модели
+        5. Подбор порядка полинома по критерию Фишера
+        
+        **Распределения:** 
+        - F₁(П) = Равномерное [0,4]
+        - F₂(П) = Эрланга (форма=4, масштаб=1) 
+        - F₃(П) = Нормальное N(0,3)
+        """)
+    
+    # Параметры в сайдбаре
+    st.sidebar.markdown("## ⚙️ Параметры эксперимента")
+    
+    num_samples = st.sidebar.slider("Количество измерений", 100, 2000, 1000, 100)
+    alphas = st.sidebar.multiselect(
+        "Уровни погрешности α", 
+        [0.1, 0.5, 1.0, 1.5], 
+        default=[0.1, 0.5, 1.0, 1.5]
+    )
+    max_degree = st.sidebar.slider("Максимальная степень полинома", 1, 6, 4)
+    
+    if st.sidebar.button("🚀 Запустить расчет", type="primary"):
+        with st.spinner("Выполняются расчеты..."):
+            results = []
+            all_data = []
+            
+            progress_bar = st.progress(0)
+            
+            for i, alpha in enumerate(alphas):
+                # Генерация данных
+                P1, P2, P3 = generate_reliability_data(alpha, num_samples)
+                
+                # Сохранение данных
+                for j in range(num_samples):
+                    all_data.append([alpha, j+1, P1[j], P2[j], P3[j]])
+                
+                # Построение регрессионной модели
+                X = np.column_stack((P1, P2))
+                y = P3
+                
+                best_degree, best_model = select_polynomial_degree(X, y, max_degree)
+                
+                # Оценка качества модели
+                y_pred = best_model.predict(X)
+                r2 = 1 - np.sum((y - y_pred)**2) / np.sum((y - np.mean(y))**2)
+                
+                # Расчет общей дисперсии
+                cov_matrix = np.cov(np.column_stack((P1, P2, P3)), rowvar=False)
+                total_variance = np.trace(cov_matrix)
+                
+                results.append({
+                    'alpha': alpha,
+                    'best_degree': best_degree,
+                    'r2_score': r2,
+                    'total_variance': total_variance,
+                    'model': best_model,
+                    'P1': P1,
+                    'P2': P2, 
+                    'P3': P3
+                })
+                
+                progress_bar.progress((i + 1) / len(alphas))
+            
+            # Сохранение результатов в session_state
+            st.session_state.results = results
+            st.session_state.all_data = all_data
+            
+            st.success("✅ Расчеты завершены!")
+    
+    # Отображение результатов
+    if hasattr(st.session_state, 'results'):
+        results = st.session_state.results
+        all_data = st.session_state.all_data
+        
+        # Создаем DataFrame с результатами
+        df_results = pd.DataFrame([{
+            'α': r['alpha'],
+            'Степень полинома': r['best_degree'], 
+            'R²': r['r2_score'],
+            'Общая дисперсия': r['total_variance']
+        } for r in results])
+        
+        # Вкладки для разных разделов
+        tab1, tab2, tab3, tab4 = st.tabs(["📈 Основные результаты", "🔄 Поля рассеяния", "🧮 Регрессионные модели", "📊 Исходные данные"])
+        
+        with tab1:
+            st.markdown('<div class="section-header">Основные метрики</div>', unsafe_allow_html=True)
+            
+            # Метрики в колонках
+            cols = st.columns(len(results))
+            for i, (col, result) in enumerate(zip(cols, results)):
+                with col:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>α = {result['alpha']}</h3>
+                        <h4>Степень: {result['best_degree']}</h4>
+                        <p>R² = {result['r2_score']:.4f}</p>
+                        <p>Дисперсия = {result['total_variance']:.2f}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # График зависимости R² от α
+            st.markdown('<div class="section-header">Влияние погрешности на качество модели</div>', unsafe_allow_html=True)
+            
+            fig_r2 = go.Figure()
+            fig_r2.add_trace(go.Scatter(
+                x=[r['alpha'] for r in results],
+                y=[r['r2_score'] for r in results],
+                mode='lines+markers',
+                marker=dict(size=12),
+                line=dict(width=3)
+            ))
+            
+            fig_r2.update_layout(
+                title="Зависимость R² от уровня погрешности α",
+                xaxis_title="α",
+                yaxis_title="R²",
+                template="plotly_white",
+                height=400
+            )
+            
+            st.plotly_chart(fig_r2, use_container_width=True)
+            
+            # Анализ результатов
+            st.markdown('<div class="section-header">Анализ результатов</div>', unsafe_allow_html=True)
+            
+            analysis_text = """
+            **Наблюдаемые закономерности:**
+            - С увеличением α (погрешности измерений) качество модели R² закономерно снижается
+            - При малых α критерий Фишера выбирает более сложные модели (высокие степени полиномов)
+            - При больших α выбираются простые модели для избежания переобучения
+            - Общая дисперсия данных растет с увеличением α
+            """
+            
+            st.markdown(analysis_text)
+        
+        with tab2:
+            st.markdown('<div class="section-header">Поля рассеяния параметров</div>', unsafe_allow_html=True)
+            
+            for result in results:
+                alpha = result['alpha']
+                
+                st.markdown(f"### Уровень погрешности α = {alpha}")
+                
+                # Создаем подграфики для всех пар параметров
+                fig_scatter = make_subplots(
+                    rows=1, cols=3,
+                    subplot_titles=[f'P1-P2 (α={alpha})', f'P1-P3 (α={alpha})', f'P2-P3 (α={alpha})']
+                )
+                
+                # P1-P2
+                fig_scatter.add_trace(
+                    go.Scatter(
+                        x=result['P1'], y=result['P2'],
+                        mode='markers',
+                        marker=dict(size=6, color=result['P3'], colorscale='Viridis', showscale=False),
+                        name='P1-P2'
+                    ), row=1, col=1
+                )
+                
+                # P1-P3  
+                fig_scatter.add_trace(
+                    go.Scatter(
+                        x=result['P1'], y=result['P3'],
+                        mode='markers', 
+                        marker=dict(size=6, color=result['P2'], colorscale='Plasma', showscale=False),
+                        name='P1-P3'
+                    ), row=1, col=2
+                )
+                
+                # P2-P3
+                fig_scatter.add_trace(
+                    go.Scatter(
+                        x=result['P2'], y=result['P3'],
+                        mode='markers',
+                        marker=dict(size=6, color=result['P1'], colorscale='Rainbow', showscale=False),
+                        name='P2-P3'
+                    ), row=1, col=3
+                )
+                
+                fig_scatter.update_layout(height=400, showlegend=False)
+                fig_scatter.update_xaxes(title_text="P1", row=1, col=1)
+                fig_scatter.update_xaxes(title_text="P1", row=1, col=2)
+                fig_scatter.update_xaxes(title_text="P2", row=1, col=3)
+                fig_scatter.update_yaxes(title_text="P2", row=1, col=1)
+                fig_scatter.update_yaxes(title_text="P3", row=1, col=2)
+                fig_scatter.update_yaxes(title_text="P3", row=1, col=3)
+                
+                st.plotly_chart(fig_scatter, use_container_width=True)
+        
+        with tab3:
+            st.markdown('<div class="section-header">3D визуализация регрессионных моделей</div>', unsafe_allow_html=True)
+            
+            for result in results:
+                alpha = result['alpha']
+                degree = result['best_degree']
+                
+                st.markdown(f"### Регрессионная модель для α = {alpha}")
+                
+                fig_3d = create_3d_regression_plot(
+                    result['P1'], result['P2'], result['P3'],
+                    result['model'], alpha, degree
+                )
+                
+                st.plotly_chart(fig_3d, use_container_width=True)
+                
+                # Информация о модели
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Степень полинома", degree)
+                with col2:
+                    st.metric("R²", f"{result['r2_score']:.4f}")
+                with col3:
+                    st.metric("Общая дисперсия", f"{result['total_variance']:.2f}")
+                
+                st.markdown("---")
+        
+        with tab4:
+            st.markdown('<div class="section-header">Исходные данные измерений</div>', unsafe_allow_html=True)
+            
+            # Создаем DataFrame с данными
+            df_data = pd.DataFrame(all_data, columns=['alpha', 'Номер', 'P1', 'P2', 'P3'])
+            
+            # Фильтр по alpha
+            selected_alpha = st.selectbox("Выберите уровень α для просмотра данных:", alphas)
+            
+            df_filtered = df_data[df_data['alpha'] == selected_alpha].head(100)  # Показываем первые 100 строк
+            
+            st.dataframe(df_filtered, use_container_width=True)
+            
+            # Кнопка скачивания данных
+            csv = df_data.to_csv(index=False)
+            st.download_button(
+                label="📥 Скачать все данные (CSV)",
+                data=csv,
+                file_name="reliability_data.csv",
+                mime="text/csv"
+            )
+            
+            # Статистика данных
+            st.markdown("### Статистика данных")
+            st.dataframe(df_data.groupby('alpha').agg({
+                'P1': ['mean', 'std', 'min', 'max'],
+                'P2': ['mean', 'std', 'min', 'max'], 
+                'P3': ['mean', 'std', 'min', 'max']
+            }).round(4))
+    
+    else:
+        # Инструкция при первом запуске
+        st.info("👈 Выберите параметры в боковой панели и нажмите 'Запустить расчет' для начала анализа")
+
+if __name__ == "__main__":
+    main()

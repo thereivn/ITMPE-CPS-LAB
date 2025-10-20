@@ -1,0 +1,5 @@
+docker tag reliability_streamlit_app thereivn/reliability-streamlit-app:0.0.2
+
+docker push thereivn/reliability-streamlit-app:0.0.2
+
+docker pull thereivn/reliability-streamlit-app:0.0.2
