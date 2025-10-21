@@ -198,6 +198,75 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
     
     return fig
 
+def compute_mean_curve(x, y, num_bins=20):
+    """
+    Вычисляет среднюю кривую через бининг и усреднение
+    Возвращает x_bin_centers, y_means
+    """
+    # Создаем бины по x
+    x_min, x_max = x.min(), x.max()
+    bins = np.linspace(x_min, x_max, num_bins + 1)
+    
+    # Вычисляем средние значения в каждом бине
+    x_bin_centers = (bins[:-1] + bins[1:]) / 2
+    y_means = []
+    
+    for i in range(len(bins) - 1):
+        mask = (x >= bins[i]) & (x < bins[i + 1])
+        if np.sum(mask) > 0:
+            y_means.append(np.mean(y[mask]))
+        else:
+            y_means.append(np.nan)
+    
+    # Убираем NaN значения
+    valid_mask = ~np.isnan(y_means)
+    return x_bin_centers[valid_mask], np.array(y_means)[valid_mask]
+
+def add_mean_curves_to_scatter(fig, P1, P2, P3, row, col):
+    """Добавляет средние кривые на графики рассеяния"""
+    
+    if col == 1:  # P1-P2 график
+        # Средняя кривая P2 от P1
+        x_curve, y_curve = compute_mean_curve(P1, P2)
+        fig.add_trace(
+            go.Scatter(
+                x=x_curve, y=y_curve,
+                mode='lines+markers',
+                line=dict(color='red', width=3),
+                marker=dict(size=6, color='red'),
+                name='Средняя P2 от P1',
+                showlegend=False
+            ), row=row, col=col
+        )
+        
+    elif col == 2:  # P1-P3 график
+        # Средняя кривая P3 от P1
+        x_curve, y_curve = compute_mean_curve(P1, P3)
+        fig.add_trace(
+            go.Scatter(
+                x=x_curve, y=y_curve,
+                mode='lines+markers',
+                line=dict(color='red', width=3),
+                marker=dict(size=6, color='red'),
+                name='Средняя P3 от P1',
+                showlegend=False
+            ), row=row, col=col
+        )
+        
+    elif col == 3:  # P2-P3 график
+        # Средняя кривая P3 от P2
+        x_curve, y_curve = compute_mean_curve(P2, P3)
+        fig.add_trace(
+            go.Scatter(
+                x=x_curve, y=y_curve,
+                mode='lines+markers',
+                line=dict(color='red', width=3),
+                marker=dict(size=6, color='red'),
+                name='Средняя P3 от P2',
+                showlegend=False
+            ), row=row, col=col
+        )
+
 # Основной интерфейс
 def main():
     # Заголовок
@@ -350,6 +419,12 @@ def main():
         
         with tab2:
             st.markdown('<div class="section-header">Поля рассеяния параметров</div>', unsafe_allow_html=True)
+            st.markdown("""
+            **Пояснение к графикам:**
+            - **Красные линии с маркерами**: средние кривые, показывающие математическое ожидание одной переменной относительно другой
+            - **Цвет точек**: отражает значение третьего параметра (используется цветовая шкала)
+            - **Средняя кривая** вычисляется через разбиение на бины и усреднение значений в каждом бине
+            """)
             
             for result in results:
                 alpha = result['alpha']
@@ -359,7 +434,11 @@ def main():
                 # Создаем подграфики для всех пар параметров
                 fig_scatter = make_subplots(
                     rows=1, cols=3,
-                    subplot_titles=[f'P1-P2 (α={alpha})', f'P1-P3 (α={alpha})', f'P2-P3 (α={alpha})']
+                    subplot_titles=[
+                        f'P1-P2 (α={alpha}) - Средняя P2 от P1', 
+                        f'P1-P3 (α={alpha}) - Средняя P3 от P1', 
+                        f'P2-P3 (α={alpha}) - Средняя P3 от P2'
+                    ]
                 )
                 
                 # P1-P2
@@ -367,8 +446,19 @@ def main():
                     go.Scatter(
                         x=result['P1'], y=result['P2'],
                         mode='markers',
-                        marker=dict(size=6, color=result['P3'], colorscale='Viridis', showscale=False),
-                        name='P1-P2'
+                        marker=dict(
+                            size=5, 
+                            color=result['P3'], 
+                            colorscale='Viridis', 
+                            showscale=False,
+                            opacity=0.6
+                        ),
+                        name='P1-P2',
+                        hovertemplate=
+                        "<b>P1</b>: %{x:.3f}<br>" +
+                        "<b>P2</b>: %{y:.3f}<br>" +
+                        "<b>P3</b>: %{marker.color:.3f}<br>" +
+                        "<extra></extra>"
                     ), row=1, col=1
                 )
                 
@@ -377,8 +467,19 @@ def main():
                     go.Scatter(
                         x=result['P1'], y=result['P3'],
                         mode='markers', 
-                        marker=dict(size=6, color=result['P2'], colorscale='Plasma', showscale=False),
-                        name='P1-P3'
+                        marker=dict(
+                            size=5, 
+                            color=result['P2'], 
+                            colorscale='Plasma', 
+                            showscale=False,
+                            opacity=0.6
+                        ),
+                        name='P1-P3',
+                        hovertemplate=
+                        "<b>P1</b>: %{x:.3f}<br>" +
+                        "<b>P3</b>: %{y:.3f}<br>" +
+                        "<b>P2</b>: %{marker.color:.3f}<br>" +
+                        "<extra></extra>"
                     ), row=1, col=2
                 )
                 
@@ -387,12 +488,46 @@ def main():
                     go.Scatter(
                         x=result['P2'], y=result['P3'],
                         mode='markers',
-                        marker=dict(size=6, color=result['P1'], colorscale='Rainbow', showscale=False),
-                        name='P2-P3'
+                        marker=dict(
+                            size=5, 
+                            color=result['P1'], 
+                            colorscale='Rainbow', 
+                            showscale=False,
+                            opacity=0.6
+                        ),
+                        name='P2-P3',
+                        hovertemplate=
+                        "<b>P2</b>: %{x:.3f}<br>" +
+                        "<b>P3</b>: %{y:.3f}<br>" +
+                        "<b>P1</b>: %{marker.color:.3f}<br>" +
+                        "<extra></extra>"
                     ), row=1, col=3
                 )
                 
-                fig_scatter.update_layout(height=400, showlegend=False)
+                # Добавляем средние кривые на все графики
+                add_mean_curves_to_scatter(
+                    fig_scatter, 
+                    result['P1'], result['P2'], result['P3'],
+                    row=1, col=1
+                )
+                add_mean_curves_to_scatter(
+                    fig_scatter, 
+                    result['P1'], result['P2'], result['P3'],
+                    row=1, col=2
+                )
+                add_mean_curves_to_scatter(
+                    fig_scatter, 
+                    result['P1'], result['P2'], result['P3'],
+                    row=1, col=3
+                )
+                
+                fig_scatter.update_layout(
+                    height=500, 
+                    showlegend=False,
+                    title_text=f"Поля рассеяния со средними кривыми (α={alpha})"
+                )
+                
+                # Настраиваем подписи осей
                 fig_scatter.update_xaxes(title_text="P1", row=1, col=1)
                 fig_scatter.update_xaxes(title_text="P1", row=1, col=2)
                 fig_scatter.update_xaxes(title_text="P2", row=1, col=3)
@@ -401,6 +536,21 @@ def main():
                 fig_scatter.update_yaxes(title_text="P3", row=1, col=3)
                 
                 st.plotly_chart(fig_scatter, use_container_width=True)
+                
+                # Добавляем пояснение для конкретного уровня α
+                with st.expander(f"Интерпретация средних кривых для α = {alpha}"):
+                    st.markdown(f"""
+                    **Средние кривые показывают:**
+                    
+                    **График P1-P2:** Как в среднем изменяется P2 при изменении P1
+                    **График P1-P3:** Как в среднем изменяется P3 при изменении P1  
+                    **График P2-P3:** Как в среднем изменяется P3 при изменении P2
+                    
+                    **При α = {alpha}:**
+                    - Средние кривые показывают основную тенденцию зависимости
+                    - Разброс точек вокруг средней кривой характеризует влияние погрешности
+                    - {'Четко видна зависимость между параметрами' if alpha <= 0.5 else 'Зависимость частично скрыта шумом'}
+                    """)
         
         with tab3:
             st.markdown('<div class="section-header">3D визуализация регрессионных моделей</div>', unsafe_allow_html=True)
