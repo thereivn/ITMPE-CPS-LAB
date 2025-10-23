@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Инициализация session_state для темы и размера текста
+# Инициализация session_state
 if 'theme' not in st.session_state:
     st.session_state.theme = "light"
 if 'font_size' not in st.session_state:
@@ -29,228 +29,228 @@ if 'all_data' not in st.session_state:
     st.session_state.all_data = None
 
 # Функции для управления темой и размером текста
-def apply_theme_and_font_size():
-    """Применяет выбранную тему и размер текста"""
-    theme_css = ""
-    font_sizes = {
+def apply_custom_styles():
+    """Применяет кастомные стили для темы и размера текста"""
+    
+    # Определяем размеры для разных уровней текста
+    font_configs = {
         "small": {
-            "base": "14px", "header": "2rem", "section": "1.3rem", 
-            "metric": "0.9rem", "body": "14px", "sidebar": "14px"
+            "base": "14px",
+            "h1": "28px",
+            "h2": "22px", 
+            "h3": "18px",
+            "body": "14px",
+            "small": "12px",
+            "metric": "13px"
         },
         "medium": {
-            "base": "16px", "header": "2.5rem", "section": "1.5rem", 
-            "metric": "1rem", "body": "16px", "sidebar": "16px"
+            "base": "16px",
+            "h1": "32px",
+            "h2": "24px",
+            "h3": "20px", 
+            "body": "16px",
+            "small": "14px",
+            "metric": "15px"
         },
         "large": {
-            "base": "18px", "header": "3rem", "section": "1.8rem", 
-            "metric": "1.2rem", "body": "18px", "sidebar": "18px"
+            "base": "18px",
+            "h1": "36px",
+            "h2": "28px",
+            "h3": "24px",
+            "body": "18px", 
+            "small": "16px",
+            "metric": "17px"
         }
     }
     
-    fs = font_sizes[st.session_state.font_size]
+    fs = font_configs[st.session_state.font_size]
     
-    if st.session_state.theme == "dark":
-        theme_css = f"""
-            body {{
-                background-color: #0e1117;
-                color: #fafafa;
-                font-size: {fs['body']};
-            }}
-            .main {{
-                background-color: #0e1117;
-                color: #fafafa;
-            }}
-            .main-header {{
-                color: #4da6ff;
-            }}
-            .section-header {{
-                color: #66b3ff;
-                border-bottom: 2px solid #66b3ff;
-            }}
-            .result-card {{
-                background-color: #262730;
-                border-left: 5px solid #66b3ff;
-                color: #fafafa;
-            }}
-            .metric-card {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-            }}
-            .instruction-box {{
-                background-color: #262730;
-                color: #fafafa;
-                border-left: 5px solid #66b3ff;
-            }}
-            .tooltip {{
-                background-color: #262730;
-                color: #fafafa;
-                border-left: 3px solid #66b3ff;
-            }}
-            .stExpander {{
-                background-color: #262730;
-            }}
-            .stExpander > div {{
-                background-color: #262730;
-            }}
-            .st-bb {{
-                background-color: #262730;
-            }}
-            .st-at {{
-                background-color: #262730;
-            }}
-            div[data-testid="stExpander"] div[role="button"] p {{
-                color: #fafafa !important;
-            }}
-            .st-bh, .st-bg, .st-be, .st-bf, .st-bd, .st-bc {{
-                background-color: #0e1117;
-            }}
-            .st-ae, .st-af, .st-ag, .st-ah {{
-                background-color: #0e1117;
-            }}
-            .stSidebar {{
-                background-color: #262730;
-            }}
-            .css-1d391kg {{
-                background-color: #262730;
-            }}
-            .st-bx {{
-                background-color: #262730;
-            }}
-            .st-by {{
-                background-color: #262730;
-            }}
-            .st-bz {{
-                background-color: #262730;
-            }}
-            .st-c0 {{
-                background-color: #262730;
-            }}
-            .st-c1 {{
-                background-color: #262730;
-            }}
-            .st-c2 {{
-                background-color: #262730;
-            }}
-            .stAlert {{
-                background-color: #262730;
-            }}
-            .stDataFrame {{
-                background-color: #262730;
-            }}
-            .stMarkdown {{
-                color: #fafafa;
-            }}
-            .stMarkdown p, .stMarkdown li, .stMarkdown ul, .stMarkdown ol {{
-                color: #fafafa;
-            }}
-            .stSelectbox, .stMultiselect, .stSlider, .stButton {{
-                color: #fafafa;
-            }}
-            .stTextInput, .stNumberInput, .stTextArea {{
-                color: #fafafa;
-            }}
-            .stTabs {{
-                background-color: #0e1117;
-            }}
-            .stTab {{
-                background-color: #262730;
-                color: #fafafa;
-            }}
-            .stTab:hover {{
-                background-color: #3a3d4a;
-            }}
-            .stTab[data-baseweb="tab"] {{
-                color: #fafafa;
-            }}
-        """
-    else:
-        theme_css = f"""
-            body {{
-                background-color: #ffffff;
-                color: #31333F;
-                font-size: {fs['body']};
-            }}
-            .main {{
-                background-color: #ffffff;
-                color: #31333F;
-            }}
-        """
-    
-    css = f"""
+    # Базовые стили для светлой темы
+    base_css = f"""
     <style>
-        /* Базовые стили для всего приложения */
-        body {{
-            font-size: {fs['body']};
+        /* Базовые настройки шрифтов */
+        html, body, [class*="css"] {{
+            font-size: {fs['base']} !important;
         }}
         
-        /* Сайдбар */
-        section[data-testid="stSidebar"] {{
-            font-size: {fs['sidebar']};
+        /* Заголовки */
+        h1 {{
+            font-size: {fs['h1']} !important;
+        }}
+        h2 {{
+            font-size: {fs['h2']} !important;
+        }}
+        h3 {{
+            font-size: {fs['h3']} !important;
         }}
         
-        /* Основные стили компонентов */
-        .main-header {{
-            font-size: {fs['header']};
-            color: #1f77b4;
-            text-align: center;
-            margin-bottom: 2rem;
-        }}
-        .section-header {{
-            font-size: {fs['section']};
-            color: #2e86ab;
-            border-bottom: 2px solid #2e86ab;
-            padding-bottom: 0.5rem;
-            margin-top: 2rem;
-        }}
-        .result-card {{
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 10px;
-            border-left: 5px solid #2e86ab;
-            margin-bottom: 1rem;
-            color: #31333F;
-        }}
-        .metric-card {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem;
-            border-radius: 10px;
-            text-align: center;
-            font-size: {fs['metric']};
-        }}
-        .instruction-box {{
-            background-color: #e8f4fd;
-            padding: 1.5rem;
-            border-radius: 10px;
-            border-left: 5px solid #2e86ab;
-            margin: 1rem 0;
-            color: #31333F;
-        }}
-        .tooltip {{
-            background-color: #f0f2f6;
-            padding: 0.5rem;
-            border-radius: 5px;
-            border-left: 3px solid #2e86ab;
-            margin: 0.5rem 0;
-            font-size: 0.9em;
-            color: #31333F;
-        }}
-        
-        /* Улучшенная поддержка тем для Streamlit компонентов */
-        .st-bb {{
-            color: inherit;
-        }}
+        /* Основной текст */
         .stMarkdown {{
-            color: inherit;
-        }}
-        .stMarkdown p, .stMarkdown li, .stMarkdown ul, .stMarkdown ol {{
-            color: inherit;
+            font-size: {fs['body']} !important;
         }}
         
-        {theme_css}
+        /* Мелкий текст */
+        .stCaption, .stTooltip {{
+            font-size: {fs['small']} !important;
+        }}
+        
+        /* Метрики и карточки */
+        .metric-card {{
+            font-size: {fs['metric']} !important;
+        }}
+        
+        /* Элементы форм */
+        .stSelectbox, .stMultiselect, .stSlider, .stButton, .stTextInput {{
+            font-size: {fs['body']} !important;
+        }}
+        
+        /* Таблицы */
+        .stDataFrame {{
+            font-size: {fs['body']} !important;
+        }}
+        
+        /* Вкладки */
+        .stTabs {{
+            font-size: {fs['body']} !important;
+        }}
     </style>
     """
-    st.markdown(css, unsafe_allow_html=True)
+    
+    # Стили для темной темы
+    dark_theme_css = """
+    <style>
+        /* Основные цвета темной темы */
+        .main {
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+        
+        .stApp {
+            background-color: #0E1117;
+        }
+        
+        /* Сайдбар */
+        .css-1d391kg {
+            background-color: #262730;
+        }
+        
+        /* Текст */
+        .stMarkdown {
+            color: #FAFAFA;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #FAFAFA;
+        }
+        
+        /* Карточки и метрики */
+        .result-card {
+            background-color: #262730;
+            color: #FAFAFA;
+            border-left: 5px solid #66B3FF;
+        }
+        
+        .instruction-box {
+            background-color: #262730;
+            color: #FAFAFA;
+            border-left: 5px solid #66B3FF;
+        }
+        
+        .tooltip {
+            background-color: #262730;
+            color: #FAFAFA;
+            border-left: 3px solid #66B3FF;
+        }
+        
+        /* Элементы форм */
+        .stSelectbox > div > div {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+        
+        .stMultiselect > div > div {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+        
+        .stTextInput > div > div > input {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+        
+        .stSlider > div > div > div {
+            color: #FAFAFA;
+        }
+        
+        /* Вкладки */
+        .stTabs > div > button {
+            background-color: #262730;
+            color: #FAFAFA;
+        }
+        
+        .stTabs > div > button[aria-selected="true"] {
+            background-color: #66B3FF;
+            color: #0E1117;
+        }
+    </style>
+    """
+    
+    # Стили для светлой темы
+    light_theme_css = """
+    <style>
+        /* Основные цвета светлой темы */
+        .main {
+            background-color: #FFFFFF;
+            color: #31333F;
+        }
+        
+        .stApp {
+            background-color: #FFFFFF;
+        }
+        
+        /* Сайдбар */
+        .css-1d391kg {
+            background-color: #F0F2F6;
+        }
+        
+        /* Текст */
+        .stMarkdown {
+            color: #31333F;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #31333F;
+        }
+        
+        /* Карточки и метрики */
+        .result-card {
+            background-color: #F8F9FA;
+            color: #31333F;
+            border-left: 5px solid #2E86AB;
+        }
+        
+        .instruction-box {
+            background-color: #E8F4FD;
+            color: #31333F;
+            border-left: 5px solid #2E86AB;
+        }
+        
+        .tooltip {
+            background-color: #F0F2F6;
+            color: #31333F;
+            border-left: 3px solid #2E86AB;
+        }
+    </style>
+    """
+    
+    # Применяем базовые стили шрифтов
+    st.markdown(base_css, unsafe_allow_html=True)
+    
+    # Применяем тему
+    if st.session_state.theme == "dark":
+        st.markdown(dark_theme_css, unsafe_allow_html=True)
+    else:
+        st.markdown(light_theme_css, unsafe_allow_html=True)
 
 def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     """Генерация данных согласно алгоритму из задания"""
@@ -343,11 +343,14 @@ def create_scatter_plotly(P1, P2, P3, alpha, title):
         "<extra></extra>"
     ))
     
+    # Используем темную тему для Plotly если выбрана темная тема
+    template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+    
     fig.update_layout(
         title=f"{title} (α={alpha})",
         xaxis_title="P1",
         yaxis_title="P2",
-        template="plotly_white",
+        template=template,
         height=500
     )
     
@@ -387,6 +390,9 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
         name=f'Полином {degree}-й степени'
     ))
     
+    # Используем темную тему для Plotly если выбрана темная тема
+    template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+    
     fig.update_layout(
         title=f'Регрессионная модель П₃ = φ(П₁, П₂) (α={alpha}, степень={degree})',
         scene=dict(
@@ -394,6 +400,7 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
             yaxis_title='P2', 
             zaxis_title='P3'
         ),
+        template=template,
         height=600
     )
     
@@ -501,8 +508,8 @@ def show_parameter_instructions():
 
 # Основной интерфейс
 def main():
-    # Применяем настройки темы и шрифта в самом начале
-    apply_theme_and_font_size()
+    # Применяем кастомные стили в самом начале
+    apply_custom_styles()
     
     # Настройки в сайдбаре
     st.sidebar.markdown("## ⚙️ Настройки интерфейса")
@@ -577,7 +584,7 @@ def main():
         """, unsafe_allow_html=True)
     
     # Заголовок
-    st.markdown('<h1 class="main-header">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 style="text-align: center; margin-bottom: 2rem;">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
     
     # Описание задачи
     with st.expander("📋 Описание лабораторной работы", expanded=True):
@@ -666,14 +673,20 @@ def main():
         tab1, tab2, tab3, tab4 = st.tabs(["📈 Основные результаты", "🔄 Поля рассеяния", "🧮 Регрессионные модели", "📊 Исходные данные"])
         
         with tab1:
-            st.markdown('<div class="section-header">Основные метрики</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Основные метрики</h2>', unsafe_allow_html=True)
             
             # Метрики в колонках
             cols = st.columns(len(results))
             for i, (col, result) in enumerate(zip(cols, results)):
                 with col:
+                    # Определяем цвет градиента в зависимости от темы
+                    if st.session_state.theme == "dark":
+                        gradient = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                    else:
+                        gradient = "linear-gradient(135deg, #1f77b4 0%, #2e86ab 100%)"
+                    
                     st.markdown(f"""
-                    <div class="metric-card">
+                    <div style="background: {gradient}; color: white; padding: 1rem; border-radius: 10px; text-align: center; font-size: {font_configs[st.session_state.font_size]['metric']}px;">
                         <h3>α = {result['alpha']}</h3>
                         <h4>Степень: {result['best_degree']}</h4>
                         <p>R² = {result['r2_score']:.4f}</p>
@@ -682,7 +695,10 @@ def main():
                     """, unsafe_allow_html=True)
             
             # График зависимости R² от α
-            st.markdown('<div class="section-header">Влияние погрешности на качество модели</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Влияние погрешности на качество модели</h2>', unsafe_allow_html=True)
+            
+            # Используем темную тему для Plotly если выбрана темная тема
+            template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
             
             fig_r2 = go.Figure()
             fig_r2.add_trace(go.Scatter(
@@ -697,14 +713,14 @@ def main():
                 title="Зависимость R² от уровня погрешности α",
                 xaxis_title="α",
                 yaxis_title="R²",
-                template="plotly_white",
+                template=template,
                 height=400
             )
             
             st.plotly_chart(fig_r2, use_container_width=True)
             
             # Анализ результатов
-            st.markdown('<div class="section-header">Анализ результатов</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Анализ результатов</h2>', unsafe_allow_html=True)
             
             analysis_text = """
             **Наблюдаемые закономерности:**
@@ -717,7 +733,7 @@ def main():
             st.markdown(analysis_text)
         
         with tab2:
-            st.markdown('<div class="section-header">Поля рассеяния параметров</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Поля рассеяния параметров</h2>', unsafe_allow_html=True)
             st.markdown("""
             **Пояснение к графикам:**
             - **Красные линии с маркерами**: средние кривые, показывающие математическое ожидание одной переменной относительно другой
@@ -820,10 +836,14 @@ def main():
                     row=1, col=3
                 )
                 
+                # Используем темную тему для Plotly если выбрана темная тема
+                template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+                
                 fig_scatter.update_layout(
                     height=500, 
                     showlegend=False,
-                    title_text=f"Поля рассеяния со средними кривыми (α={alpha})"
+                    title_text=f"Поля рассеяния со средними кривыми (α={alpha})",
+                    template=template
                 )
                 
                 # Настраиваем подписи осей
@@ -852,7 +872,7 @@ def main():
                     """)
         
         with tab3:
-            st.markdown('<div class="section-header">3D визуализация регрессионных моделей</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">3D визуализация регрессионных моделей</h2>', unsafe_allow_html=True)
             
             for result in results:
                 alpha = result['alpha']
@@ -879,7 +899,7 @@ def main():
                 st.markdown("---")
         
         with tab4:
-            st.markdown('<div class="section-header">Исходные данные измерений</div>', unsafe_allow_html=True)
+            st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Исходные данные измерений</h2>', unsafe_allow_html=True)
             
             # Создаем DataFrame с данными
             df_data = pd.DataFrame(all_data, columns=['alpha', 'Номер', 'P1', 'P2', 'P3'])
@@ -911,6 +931,37 @@ def main():
     else:
         # Инструкция при первом запуске
         st.info("👈 Выберите параметры в боковой панели и нажмите 'Запустить расчет' для начала анализа")
+
+# Глобальная конфигурация размеров шрифта
+font_configs = {
+    "small": {
+        "base": "14px",
+        "h1": "28px",
+        "h2": "22px", 
+        "h3": "18px",
+        "body": "14px",
+        "small": "12px",
+        "metric": "13px"
+    },
+    "medium": {
+        "base": "16px",
+        "h1": "32px",
+        "h2": "24px",
+        "h3": "20px", 
+        "body": "16px",
+        "small": "14px",
+        "metric": "15px"
+    },
+    "large": {
+        "base": "18px",
+        "h1": "36px",
+        "h2": "28px",
+        "h3": "24px",
+        "body": "18px", 
+        "small": "16px",
+        "metric": "17px"
+    }
+}
 
 if __name__ == "__main__":
     main()
