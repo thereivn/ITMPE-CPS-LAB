@@ -23,46 +23,172 @@ if 'theme' not in st.session_state:
     st.session_state.theme = "light"
 if 'font_size' not in st.session_state:
     st.session_state.font_size = "medium"
+if 'results' not in st.session_state:
+    st.session_state.results = None
+if 'all_data' not in st.session_state:
+    st.session_state.all_data = None
 
 # Функции для управления темой и размером текста
 def apply_theme_and_font_size():
     """Применяет выбранную тему и размер текста"""
     theme_css = ""
     font_sizes = {
-        "small": {"base": "14px", "header": "2rem", "section": "1.3rem", "metric": "0.9rem"},
-        "medium": {"base": "16px", "header": "2.5rem", "section": "1.5rem", "metric": "1rem"},
-        "large": {"base": "18px", "header": "3rem", "section": "1.8rem", "metric": "1.2rem"}
+        "small": {
+            "base": "14px", "header": "2rem", "section": "1.3rem", 
+            "metric": "0.9rem", "body": "14px", "sidebar": "14px"
+        },
+        "medium": {
+            "base": "16px", "header": "2.5rem", "section": "1.5rem", 
+            "metric": "1rem", "body": "16px", "sidebar": "16px"
+        },
+        "large": {
+            "base": "18px", "header": "3rem", "section": "1.8rem", 
+            "metric": "1.2rem", "body": "18px", "sidebar": "18px"
+        }
     }
     
     fs = font_sizes[st.session_state.font_size]
     
     if st.session_state.theme == "dark":
-        theme_css = """
-            body {
+        theme_css = f"""
+            body {{
                 background-color: #0e1117;
                 color: #fafafa;
-            }
-            .main-header {
+                font-size: {fs['body']};
+            }}
+            .main {{
+                background-color: #0e1117;
+                color: #fafafa;
+            }}
+            .main-header {{
                 color: #4da6ff;
-            }
-            .section-header {
+            }}
+            .section-header {{
                 color: #66b3ff;
                 border-bottom: 2px solid #66b3ff;
-            }
-            .result-card {
+            }}
+            .result-card {{
                 background-color: #262730;
                 border-left: 5px solid #66b3ff;
-            }
-            .stExpander {
+                color: #fafafa;
+            }}
+            .metric-card {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }}
+            .instruction-box {{
                 background-color: #262730;
-            }
+                color: #fafafa;
+                border-left: 5px solid #66b3ff;
+            }}
+            .tooltip {{
+                background-color: #262730;
+                color: #fafafa;
+                border-left: 3px solid #66b3ff;
+            }}
+            .stExpander {{
+                background-color: #262730;
+            }}
+            .stExpander > div {{
+                background-color: #262730;
+            }}
+            .st-bb {{
+                background-color: #262730;
+            }}
+            .st-at {{
+                background-color: #262730;
+            }}
+            div[data-testid="stExpander"] div[role="button"] p {{
+                color: #fafafa !important;
+            }}
+            .st-bh, .st-bg, .st-be, .st-bf, .st-bd, .st-bc {{
+                background-color: #0e1117;
+            }}
+            .st-ae, .st-af, .st-ag, .st-ah {{
+                background-color: #0e1117;
+            }}
+            .stSidebar {{
+                background-color: #262730;
+            }}
+            .css-1d391kg {{
+                background-color: #262730;
+            }}
+            .st-bx {{
+                background-color: #262730;
+            }}
+            .st-by {{
+                background-color: #262730;
+            }}
+            .st-bz {{
+                background-color: #262730;
+            }}
+            .st-c0 {{
+                background-color: #262730;
+            }}
+            .st-c1 {{
+                background-color: #262730;
+            }}
+            .st-c2 {{
+                background-color: #262730;
+            }}
+            .stAlert {{
+                background-color: #262730;
+            }}
+            .stDataFrame {{
+                background-color: #262730;
+            }}
+            .stMarkdown {{
+                color: #fafafa;
+            }}
+            .stMarkdown p, .stMarkdown li, .stMarkdown ul, .stMarkdown ol {{
+                color: #fafafa;
+            }}
+            .stSelectbox, .stMultiselect, .stSlider, .stButton {{
+                color: #fafafa;
+            }}
+            .stTextInput, .stNumberInput, .stTextArea {{
+                color: #fafafa;
+            }}
+            .stTabs {{
+                background-color: #0e1117;
+            }}
+            .stTab {{
+                background-color: #262730;
+                color: #fafafa;
+            }}
+            .stTab:hover {{
+                background-color: #3a3d4a;
+            }}
+            .stTab[data-baseweb="tab"] {{
+                color: #fafafa;
+            }}
+        """
+    else:
+        theme_css = f"""
+            body {{
+                background-color: #ffffff;
+                color: #31333F;
+                font-size: {fs['body']};
+            }}
+            .main {{
+                background-color: #ffffff;
+                color: #31333F;
+            }}
         """
     
     css = f"""
     <style>
+        /* Базовые стили для всего приложения */
         body {{
-            font-size: {fs['base']};
+            font-size: {fs['body']};
         }}
+        
+        /* Сайдбар */
+        section[data-testid="stSidebar"] {{
+            font-size: {fs['sidebar']};
+        }}
+        
+        /* Основные стили компонентов */
         .main-header {{
             font-size: {fs['header']};
             color: #1f77b4;
@@ -82,6 +208,7 @@ def apply_theme_and_font_size():
             border-radius: 10px;
             border-left: 5px solid #2e86ab;
             margin-bottom: 1rem;
+            color: #31333F;
         }}
         .metric-card {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -97,6 +224,7 @@ def apply_theme_and_font_size():
             border-radius: 10px;
             border-left: 5px solid #2e86ab;
             margin: 1rem 0;
+            color: #31333F;
         }}
         .tooltip {{
             background-color: #f0f2f6;
@@ -105,7 +233,20 @@ def apply_theme_and_font_size():
             border-left: 3px solid #2e86ab;
             margin: 0.5rem 0;
             font-size: 0.9em;
+            color: #31333F;
         }}
+        
+        /* Улучшенная поддержка тем для Streamlit компонентов */
+        .st-bb {{
+            color: inherit;
+        }}
+        .stMarkdown {{
+            color: inherit;
+        }}
+        .stMarkdown p, .stMarkdown li, .stMarkdown ul, .stMarkdown ol {{
+            color: inherit;
+        }}
+        
         {theme_css}
     </style>
     """
@@ -345,8 +486,8 @@ def show_parameter_instructions():
     <h4>Количество прогонов:</h4>
     <ul>
         <li><strong>100-500</strong>: Быстрый расчет, подходит для тестирования</li>
-        <strong>500-1000</strong>: Оптимальный баланс скорости и точности</li>
-        <strong>1000-2000</strong>: Высокая точность, но дольше расчет</li>
+        <li><strong>500-1000</strong>: Оптимальный баланс скорости и точности</li>
+        <li><strong>1000-2000</strong>: Высокая точность, но дольше расчет</li>
     </ul>
     
     <h4>Рекомендации:</h4>
@@ -360,7 +501,7 @@ def show_parameter_instructions():
 
 # Основной интерфейс
 def main():
-    # Применяем настройки темы и шрифта
+    # Применяем настройки темы и шрифта в самом начале
     apply_theme_and_font_size()
     
     # Настройки в сайдбаре
@@ -393,12 +534,13 @@ def main():
     # Параметры эксперимента
     st.sidebar.markdown("## 🧪 Параметры эксперимента")
     
-    # Подсказки для параметров
-    st.sidebar.markdown("""
-    <div class="tooltip">
-    💡 <strong>Совет:</strong> Выберите несколько значений α для сравнения влияния погрешности на результаты
-    </div>
-    """, unsafe_allow_html=True)
+    # Подсказки для параметров (свернуты по умолчанию)
+    with st.sidebar.expander("💡 Советы по настройке параметров", expanded=False):
+        st.markdown("""
+        <div class="tooltip">
+        💡 <strong>Совет:</strong> Выберите несколько значений α для сравнения влияния погрешности на результаты
+        </div>
+        """, unsafe_allow_html=True)
     
     num_samples = st.sidebar.slider(
         "Количество прогонов", 
@@ -413,26 +555,26 @@ def main():
         help="Уровень погрешности измерений. α=0 - без погрешности, α=1.0 - погрешность равна стандартному отклонению."
     )
     
-    # Инструкция по параметрам
+    # Инструкция по параметрам (свернута по умолчанию)
     with st.sidebar.expander("📚 Инструкция по параметрам", expanded=False):
         show_parameter_instructions()
     
-    # Подсказки по навигации
-    st.sidebar.markdown("## 🧭 Навигация по разделам")
-    st.sidebar.markdown("""
-    <div class="tooltip">
-    <strong>📈 Основные результаты</strong> - ключевые метрики и общий анализ
-    </div>
-    <div class="tooltip">
-    <strong>🔄 Поля рассеяния</strong> - визуализация зависимостей между параметрами
-    </div>
-    <div class="tooltip">
-    <strong>🧮 Регрессионные модели</strong> - 3D модели регрессионных поверхностей
-    </div>
-    <div class="tooltip">
-    <strong>📊 Исходные данные</strong> - таблицы данных и статистика
-    </div>
-    """, unsafe_allow_html=True)
+    # Подсказки по навигации (свернуты по умолчанию)
+    with st.sidebar.expander("🧭 Навигация по разделам", expanded=False):
+        st.markdown("""
+        <div class="tooltip">
+        <strong>📈 Основные результаты</strong> - ключевые метрики и общий анализ
+        </div>
+        <div class="tooltip">
+        <strong>🔄 Поля рассеяния</strong> - визуализация зависимостей между параметрами
+        </div>
+        <div class="tooltip">
+        <strong>🧮 Регрессионные модели</strong> - 3D модели регрессионных поверхностей
+        </div>
+        <div class="tooltip">
+        <strong>📊 Исходные данные</strong> - таблицы данных и статистика
+        </div>
+        """, unsafe_allow_html=True)
     
     # Заголовок
     st.markdown('<h1 class="main-header">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
@@ -457,55 +599,58 @@ def main():
         """)
     
     if st.sidebar.button("🚀 Запустить расчет", type="primary"):
-        with st.spinner("Выполняются расчеты..."):
-            results = []
-            all_data = []
-            
-            progress_bar = st.progress(0)
-            
-            for i, alpha in enumerate(alphas):
-                # Генерация данных
-                P1, P2, P3 = generate_reliability_data(alpha, num_samples)
+        if not alphas:
+            st.sidebar.error("⚠️ Пожалуйста, выберите хотя бы одно значение α")
+        else:
+            with st.spinner("Выполняются расчеты..."):
+                results = []
+                all_data = []
                 
-                # Сохранение данных
-                for j in range(num_samples):
-                    all_data.append([alpha, j+1, P1[j], P2[j], P3[j]])
+                progress_bar = st.progress(0)
                 
-                # Построение регрессионной модели
-                X = np.column_stack((P1, P2))
-                y = P3
+                for i, alpha in enumerate(alphas):
+                    # Генерация данных
+                    P1, P2, P3 = generate_reliability_data(alpha, num_samples)
+                    
+                    # Сохранение данных
+                    for j in range(num_samples):
+                        all_data.append([alpha, j+1, P1[j], P2[j], P3[j]])
+                    
+                    # Построение регрессионной модели
+                    X = np.column_stack((P1, P2))
+                    y = P3
+                    
+                    best_degree, best_model = select_polynomial_degree(X, y, max_degree=5)
+                    
+                    # Оценка качества модели
+                    y_pred = best_model.predict(X)
+                    r2 = 1 - np.sum((y - y_pred)**2) / np.sum((y - np.mean(y))**2)
+                    
+                    # Расчет общей дисперсии
+                    cov_matrix = np.cov(np.column_stack((P1, P2, P3)), rowvar=False)
+                    total_variance = np.trace(cov_matrix)
+                    
+                    results.append({
+                        'alpha': alpha,
+                        'best_degree': best_degree,
+                        'r2_score': r2,
+                        'total_variance': total_variance,
+                        'model': best_model,
+                        'P1': P1,
+                        'P2': P2, 
+                        'P3': P3
+                    })
+                    
+                    progress_bar.progress((i + 1) / len(alphas))
                 
-                best_degree, best_model = select_polynomial_degree(X, y, max_degree=5)
+                # Сохранение результатов в session_state
+                st.session_state.results = results
+                st.session_state.all_data = all_data
                 
-                # Оценка качества модели
-                y_pred = best_model.predict(X)
-                r2 = 1 - np.sum((y - y_pred)**2) / np.sum((y - np.mean(y))**2)
-                
-                # Расчет общей дисперсии
-                cov_matrix = np.cov(np.column_stack((P1, P2, P3)), rowvar=False)
-                total_variance = np.trace(cov_matrix)
-                
-                results.append({
-                    'alpha': alpha,
-                    'best_degree': best_degree,
-                    'r2_score': r2,
-                    'total_variance': total_variance,
-                    'model': best_model,
-                    'P1': P1,
-                    'P2': P2, 
-                    'P3': P3
-                })
-                
-                progress_bar.progress((i + 1) / len(alphas))
-            
-            # Сохранение результатов в session_state
-            st.session_state.results = results
-            st.session_state.all_data = all_data
-            
-            st.success("✅ Расчеты завершены!")
+                st.success("✅ Расчеты завершены!")
 
     # Отображение результатов
-    if hasattr(st.session_state, 'results'):
+    if st.session_state.results is not None:
         results = st.session_state.results
         all_data = st.session_state.all_data
         
