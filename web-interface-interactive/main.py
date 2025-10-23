@@ -18,38 +18,98 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS для красивого оформления
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 2rem;
+# Инициализация session_state для темы и размера текста
+if 'theme' not in st.session_state:
+    st.session_state.theme = "light"
+if 'font_size' not in st.session_state:
+    st.session_state.font_size = "medium"
+
+# Функции для управления темой и размером текста
+def apply_theme_and_font_size():
+    """Применяет выбранную тему и размер текста"""
+    theme_css = ""
+    font_sizes = {
+        "small": {"base": "14px", "header": "2rem", "section": "1.3rem", "metric": "0.9rem"},
+        "medium": {"base": "16px", "header": "2.5rem", "section": "1.5rem", "metric": "1rem"},
+        "large": {"base": "18px", "header": "3rem", "section": "1.8rem", "metric": "1.2rem"}
     }
-    .section-header {
-        font-size: 1.5rem;
-        color: #2e86ab;
-        border-bottom: 2px solid #2e86ab;
-        padding-bottom: 0.5rem;
-        margin-top: 2rem;
-    }
-    .result-card {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 10px;
-        border-left: 5px solid #2e86ab;
-        margin-bottom: 1rem;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1rem;
-        border-radius: 10px;
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
+    
+    fs = font_sizes[st.session_state.font_size]
+    
+    if st.session_state.theme == "dark":
+        theme_css = """
+            body {
+                background-color: #0e1117;
+                color: #fafafa;
+            }
+            .main-header {
+                color: #4da6ff;
+            }
+            .section-header {
+                color: #66b3ff;
+                border-bottom: 2px solid #66b3ff;
+            }
+            .result-card {
+                background-color: #262730;
+                border-left: 5px solid #66b3ff;
+            }
+            .stExpander {
+                background-color: #262730;
+            }
+        """
+    
+    css = f"""
+    <style>
+        body {{
+            font-size: {fs['base']};
+        }}
+        .main-header {{
+            font-size: {fs['header']};
+            color: #1f77b4;
+            text-align: center;
+            margin-bottom: 2rem;
+        }}
+        .section-header {{
+            font-size: {fs['section']};
+            color: #2e86ab;
+            border-bottom: 2px solid #2e86ab;
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }}
+        .result-card {{
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 5px solid #2e86ab;
+            margin-bottom: 1rem;
+        }}
+        .metric-card {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-size: {fs['metric']};
+        }}
+        .instruction-box {{
+            background-color: #e8f4fd;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 5px solid #2e86ab;
+            margin: 1rem 0;
+        }}
+        .tooltip {{
+            background-color: #f0f2f6;
+            padding: 0.5rem;
+            border-radius: 5px;
+            border-left: 3px solid #2e86ab;
+            margin: 0.5rem 0;
+            font-size: 0.9em;
+        }}
+        {theme_css}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
 
 def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     """Генерация данных согласно алгоритму из задания"""
@@ -267,8 +327,113 @@ def add_mean_curves_to_scatter(fig, P1, P2, P3, row, col):
             ), row=row, col=col
         )
 
+def show_parameter_instructions():
+    """Показывает инструкцию по работе с параметрами эксперимента"""
+    st.markdown("""
+    <div class="instruction-box">
+    <h3>📋 Инструкция по работе с параметрами эксперимента</h3>
+    
+    <h4>Параметр α (уровень погрешности):</h4>
+    <ul>
+        <li><strong>α = 0</strong>: Идеальные измерения без погрешности</li>
+        <li><strong>α = 0.1</strong>: Очень высокая точность измерений</li>
+        <li><strong>α = 0.5</strong>: Средняя точность измерений</li>
+        <li><strong>α = 1.0</strong>: Стандартная погрешность (равна СКО распределения)</li>
+        <li><strong>α = 1.5</strong>: Высокая погрешность измерений</li>
+    </ul>
+    
+    <h4>Количество прогонов:</h4>
+    <ul>
+        <li><strong>100-500</strong>: Быстрый расчет, подходит для тестирования</li>
+        <strong>500-1000</strong>: Оптимальный баланс скорости и точности</li>
+        <strong>1000-2000</strong>: Высокая точность, но дольше расчет</li>
+    </ul>
+    
+    <h4>Рекомендации:</h4>
+    <ul>
+        <li>Начните с α = [0.1, 0.5, 1.0] для сравнения разных уровней погрешности</li>
+        <li>Используйте 1000 прогонов для точных результатов</li>
+        <li>Для быстрого тестирования используйте 100-500 прогонов</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
 # Основной интерфейс
 def main():
+    # Применяем настройки темы и шрифта
+    apply_theme_and_font_size()
+    
+    # Настройки в сайдбаре
+    st.sidebar.markdown("## ⚙️ Настройки интерфейса")
+    
+    # Выбор темы
+    theme = st.sidebar.radio(
+        "🎨 Цветовая тема:",
+        ["light", "dark"],
+        index=0 if st.session_state.theme == "light" else 1,
+        help="Выберите светлую или темную тему интерфейса"
+    )
+    
+    if theme != st.session_state.theme:
+        st.session_state.theme = theme
+        st.rerun()
+    
+    # Выбор размера текста
+    font_size = st.sidebar.selectbox(
+        "🔤 Размер текста:",
+        ["small", "medium", "large"],
+        index=["small", "medium", "large"].index(st.session_state.font_size),
+        help="Выберите удобный размер текста для чтения"
+    )
+    
+    if font_size != st.session_state.font_size:
+        st.session_state.font_size = font_size
+        st.rerun()
+    
+    # Параметры эксперимента
+    st.sidebar.markdown("## 🧪 Параметры эксперимента")
+    
+    # Подсказки для параметров
+    st.sidebar.markdown("""
+    <div class="tooltip">
+    💡 <strong>Совет:</strong> Выберите несколько значений α для сравнения влияния погрешности на результаты
+    </div>
+    """, unsafe_allow_html=True)
+    
+    num_samples = st.sidebar.slider(
+        "Количество прогонов", 
+        100, 2000, 1000, 100,
+        help="Количество генерируемых точек данных. Больше прогонов = точнее результаты, но дольше расчет."
+    )
+    
+    alphas = st.sidebar.multiselect(
+        "Значения параметра α", 
+        [0, 0.1, 0.5, 1.0, 1.5], 
+        default=[0.1, 0.5, 1.0, 1.5],
+        help="Уровень погрешности измерений. α=0 - без погрешности, α=1.0 - погрешность равна стандартному отклонению."
+    )
+    
+    # Инструкция по параметрам
+    with st.sidebar.expander("📚 Инструкция по параметрам", expanded=False):
+        show_parameter_instructions()
+    
+    # Подсказки по навигации
+    st.sidebar.markdown("## 🧭 Навигация по разделам")
+    st.sidebar.markdown("""
+    <div class="tooltip">
+    <strong>📈 Основные результаты</strong> - ключевые метрики и общий анализ
+    </div>
+    <div class="tooltip">
+    <strong>🔄 Поля рассеяния</strong> - визуализация зависимостей между параметрами
+    </div>
+    <div class="tooltip">
+    <strong>🧮 Регрессионные модели</strong> - 3D модели регрессионных поверхностей
+    </div>
+    <div class="tooltip">
+    <strong>📊 Исходные данные</strong> - таблицы данных и статистика
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Заголовок
     st.markdown('<h1 class="main-header">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
     
@@ -291,18 +456,6 @@ def main():
         - F₃(П) = Нормальное N(0,3)
         """)
     
-    # Параметры в сайдбаре
-    st.sidebar.markdown("## ⚙️ Параметры эксперимента")
-    
-    num_samples = st.sidebar.slider("Количество прогонов", 100, 2000, 1000, 100)
-    alphas = st.sidebar.multiselect(
-        "Значения параметра α", 
-        [0, 0.1, 0.5, 1.0, 1.5], 
-        default=[0.1, 0.5, 1.0, 1.5]
-    )
-    max_degree = 5
-    # max_degree = st.sidebar.slider("Максимальная степень полинома", 1, 6, 4)
-    
     if st.sidebar.button("🚀 Запустить расчет", type="primary"):
         with st.spinner("Выполняются расчеты..."):
             results = []
@@ -322,7 +475,7 @@ def main():
                 X = np.column_stack((P1, P2))
                 y = P3
                 
-                best_degree, best_model = select_polynomial_degree(X, y, max_degree)
+                best_degree, best_model = select_polynomial_degree(X, y, max_degree=5)
                 
                 # Оценка качества модели
                 y_pred = best_model.predict(X)
