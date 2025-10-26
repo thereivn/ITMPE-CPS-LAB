@@ -159,13 +159,18 @@ def apply_custom_styles():
         }}
         
         /* Вкладки - БЕЛЫЕ в темной теме */
-        .stTabs > div > button {{
-            background-color: #262730;
+        .stTabs [data-baseweb="tab"] {{
+            background-color: #262730 !important;
             color: #FAFAFA !important;
         }}
         
-        .stTabs > div > button[aria-selected="true"] {{
-            background-color: #66B3FF;
+        .stTabs [data-baseweb="tab"]:hover {{
+            background-color: #333541 !important;
+            color: #FAFAFA !important;
+        }}
+        
+        .stTabs [aria-selected="true"] {{
+            background-color: #66B3FF !important;
             color: #0E1117 !important;
         }}
         
@@ -229,7 +234,7 @@ def apply_custom_styles():
     </style>
     """
     
-    # Стили для светлой темы
+    # Стили для светлой темы - МИНИМАЛЬНЫЕ, ОСНОВНОЕ РЕШЕНИЕ ЧЕРЕЗ JAVASCRIPT
     light_theme_css = f"""
     <style>
         /* Основные цвета светлой темы */
@@ -262,14 +267,20 @@ def apply_custom_styles():
             color: #31333F;
         }}
         
-        /* Вкладки - ТЕМНЫЕ в светлой теме */
-        .stTabs > div > button {{
-            background-color: #F0F2F6;
+        /* Вкладки - черный текст в светлой теме */
+        .stTabs [data-baseweb="tab"] {{
+            background-color: #F0F2F6 !important;
+            color: #31333F !important;
+            font-weight: 600;
+        }}
+        
+        .stTabs [data-baseweb="tab"]:hover {{
+            background-color: #E6E9EF !important;
             color: #31333F !important;
         }}
         
-        .stTabs > div > button[aria-selected="true"] {{
-            background-color: #2E86AB;
+        .stTabs [aria-selected="true"] {{
+            background-color: #2E86AB !important;
             color: #FFFFFF !important;
         }}
         
@@ -292,7 +303,7 @@ def apply_custom_styles():
             border-left: 3px solid #2E86AB;
         }}
         
-        /* Expanders - видимые в светлой теме с темным текстом */
+        /* Expanders - базовые стили */
         .stExpander {{
             border: 1px solid #2E86AB !important;
             border-radius: 5px;
@@ -313,6 +324,75 @@ def apply_custom_styles():
     </style>
     """
     
+    # JavaScript для принудительного изменения цвета текста экспандеров в светлой теме
+    expander_js = """
+    <script>
+    function fixExpanderColors() {
+        // Ждем полной загрузки DOM
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fixExpanderColors);
+            return;
+        }
+        
+        // Функция для применения стилей к экспандерам
+        function applyExpanderStyles() {
+            const expanderHeaders = document.querySelectorAll('.streamlit-expanderHeader');
+            
+            expanderHeaders.forEach(header => {
+                // Принудительно устанавливаем черный цвет текста
+                header.style.color = '#31333F !important';
+                
+                // Также устанавливаем цвет для всех дочерних элементов
+                const children = header.querySelectorAll('*');
+                children.forEach(child => {
+                    child.style.color = '#31333F !important';
+                });
+                
+                // Устанавливаем стиль при наведении
+                header.onmouseover = function() {
+                    this.style.color = '#2E86AB !important';
+                    const hoverChildren = this.querySelectorAll('*');
+                    hoverChildren.forEach(child => {
+                        child.style.color = '#2E86AB !important';
+                    });
+                };
+                
+                header.onmouseout = function() {
+                    this.style.color = '#31333F !important';
+                    const hoverChildren = this.querySelectorAll('*');
+                    hoverChildren.forEach(child => {
+                        child.style.color = '#31333F !important';
+                    });
+                };
+            });
+        }
+        
+        // Применяем стили сразу
+        applyExpanderStyles();
+        
+        // Также применяем стили при изменении DOM (для динамически добавляемых элементов)
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length) {
+                    applyExpanderStyles();
+                }
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Периодически проверяем и обновляем стили (на случай, если Streamlit перезаписывает их)
+        setInterval(applyExpanderStyles, 1000);
+    }
+    
+    // Запускаем функцию
+    fixExpanderColors();
+    </script>
+    """
+    
     # Применяем базовые стили шрифтов
     st.markdown(base_css, unsafe_allow_html=True)
     
@@ -321,6 +401,8 @@ def apply_custom_styles():
         st.markdown(dark_theme_css, unsafe_allow_html=True)
     else:
         st.markdown(light_theme_css, unsafe_allow_html=True)
+        # В светлой теме добавляем JavaScript для исправления цветов экспандеров
+        st.markdown(expander_js, unsafe_allow_html=True)
 
 def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     """Генерация данных согласно алгоритму из задания"""
@@ -725,16 +807,25 @@ def main():
         "Большой": "large"
     }
     
-    # Выбор темы
-    theme = st.sidebar.radio(
+    # Словарь для отображения тем на русском
+    theme_options = {
+        "светлая": "light",
+        "тёмная": "dark"
+    }
+    
+    # Выбор темы с русскими названиями
+    theme_display = st.sidebar.radio(
         "🎨 Цветовая тема:",
-        ["light", "dark"],
+        ["светлая", "тёмная"],
         index=0 if st.session_state.theme == "light" else 1,
         help="Выберите светлую или темную тему интерфейса"
     )
     
-    if theme != st.session_state.theme:
-        st.session_state.theme = theme
+    # Получаем внутреннее значение темы
+    selected_theme = theme_options[theme_display]
+    
+    if selected_theme != st.session_state.theme:
+        st.session_state.theme = selected_theme
         st.rerun()
     
     # Выбор размера текста на русском языке
@@ -834,7 +925,7 @@ def main():
             'Общая дисперсия': r['total_variance']
         } for r in results])
         
-        # Вкладки для разных разделов (добавлена вкладка с инструкцией)
+        # Вкладки для разных разделов
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Основные результаты", "🔄 Поля рассеяния", "🧮 Регрессионные модели", "📊 Исходные данные", "📖 Инструкция"])
         
         with tab1:
@@ -848,7 +939,7 @@ def main():
                     if st.session_state.theme == "dark":
                         gradient = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
                     else:
-                        gradient = "linear-gradient(135deg, #1f77b4 0%, #2e86ab 100%)"
+                        gradient = "linear-gradient(135deg, #1f77b4 0%, #2E86AB 100%)"
                     
                     st.markdown(f"""
                     <div style="background: {gradient}; color: white; padding: 1rem; border-radius: 10px; text-align: center; font-size: {font_configs[st.session_state.font_size]['metric']}px;">
@@ -1073,42 +1164,45 @@ def main():
                 )
                 
                 # Обновляем шрифты для заголовков подграфиков
-                fig_scatter.update_annotations(font_size=fs['plot_axis'])
+                fig_scatter.update_annotations(
+                    font_size=fs['plot_axis'],
+                    font_color=font_color
+                )
                 
                 # Настраиваем подписи осей
                 fig_scatter.update_xaxes(
                     title_text="P1", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend'])
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color)
                 )
                 fig_scatter.update_xaxes(
                     title_text="P1", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend']),
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color),
                     row=1, col=2
                 )
                 fig_scatter.update_xaxes(
                     title_text="P2", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend']),
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color),
                     row=1, col=3
                 )
                 fig_scatter.update_yaxes(
                     title_text="P2", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend']),
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color),
                     row=1, col=1
                 )
                 fig_scatter.update_yaxes(
                     title_text="P3", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend']),
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color),
                     row=1, col=2
                 )
                 fig_scatter.update_yaxes(
                     title_text="P3", 
-                    title_font=dict(size=fs['plot_axis']),
-                    tickfont=dict(size=fs['plot_legend']),
+                    title_font=dict(size=fs['plot_axis'], color=font_color),
+                    tickfont=dict(size=fs['plot_legend'], color=font_color),
                     row=1, col=3
                 )
                 
