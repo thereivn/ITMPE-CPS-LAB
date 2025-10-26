@@ -20,7 +20,7 @@ st.set_page_config(
 
 # Инициализация session_state
 if 'theme' not in st.session_state:
-    st.session_state.theme = "light"
+    st.session_state.theme = "dark"  # По умолчанию светлая тема
 if 'font_size' not in st.session_state:
     st.session_state.font_size = "medium"
 if 'results' not in st.session_state:
@@ -121,6 +121,30 @@ def apply_custom_styles():
         /* Вкладки */
         .stTabs {{
             font-size: {fs['body']} !important;
+        }}
+        
+        /* ИСПРАВЛЕНИЕ: Цвета текста экспандеров для светлой темы */
+        .main .streamlit-expanderHeader {{
+            color: #31333F !important;
+        }}
+        
+        .main .streamlit-expanderHeader:hover {{
+            color: #2E86AB !important;
+        }}
+        
+        /* Развернутый экспандер - белый текст на синем фоне */
+        .main .streamlit-expanderHeader[aria-expanded="true"] {{
+            color: #FFFFFF !important;
+            background-color: #2E86AB !important;
+        }}
+        
+        /* Иконки экспандеров */
+        .main .streamlit-expanderIcon {{
+            color: #31333F !important;
+        }}
+        
+        .main .streamlit-expanderHeader[aria-expanded="true"] .streamlit-expanderIcon {{
+            color: #FFFFFF !important;
         }}
     </style>
     """
@@ -231,10 +255,32 @@ def apply_custom_styles():
         [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{
             color: #FAFAFA !important;
         }}
+        
+        /* Экспандеры в темной теме */
+        .main .streamlit-expanderHeader {{
+            color: #FAFAFA !important;
+        }}
+        
+        .main .streamlit-expanderHeader:hover {{
+            color: #66B3FF !important;
+        }}
+        
+        .main .streamlit-expanderHeader[aria-expanded="true"] {{
+            color: #0E1117 !important;
+            background-color: #66B3FF !important;
+        }}
+        
+        .main .streamlit-expanderIcon {{
+            color: #FAFAFA !important;
+        }}
+        
+        .main .streamlit-expanderHeader[aria-expanded="true"] .streamlit-expanderIcon {{
+            color: #0E1117 !important;
+        }}
     </style>
     """
     
-    # Стили для светлой темы - МИНИМАЛЬНЫЕ, ОСНОВНОЕ РЕШЕНИЕ ЧЕРЕЗ JAVASCRIPT
+    # Стили для светлой темы
     light_theme_css = f"""
     <style>
         /* Основные цвета светлой темы */
@@ -324,75 +370,6 @@ def apply_custom_styles():
     </style>
     """
     
-    # JavaScript для принудительного изменения цвета текста экспандеров в светлой теме
-    expander_js = """
-    <script>
-    function fixExpanderColors() {
-        // Ждем полной загрузки DOM
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', fixExpanderColors);
-            return;
-        }
-        
-        // Функция для применения стилей к экспандерам
-        function applyExpanderStyles() {
-            const expanderHeaders = document.querySelectorAll('.streamlit-expanderHeader');
-            
-            expanderHeaders.forEach(header => {
-                // Принудительно устанавливаем черный цвет текста
-                header.style.color = '#31333F !important';
-                
-                // Также устанавливаем цвет для всех дочерних элементов
-                const children = header.querySelectorAll('*');
-                children.forEach(child => {
-                    child.style.color = '#31333F !important';
-                });
-                
-                // Устанавливаем стиль при наведении
-                header.onmouseover = function() {
-                    this.style.color = '#2E86AB !important';
-                    const hoverChildren = this.querySelectorAll('*');
-                    hoverChildren.forEach(child => {
-                        child.style.color = '#2E86AB !important';
-                    });
-                };
-                
-                header.onmouseout = function() {
-                    this.style.color = '#31333F !important';
-                    const hoverChildren = this.querySelectorAll('*');
-                    hoverChildren.forEach(child => {
-                        child.style.color = '#31333F !important';
-                    });
-                };
-            });
-        }
-        
-        // Применяем стили сразу
-        applyExpanderStyles();
-        
-        // Также применяем стили при изменении DOM (для динамически добавляемых элементов)
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length) {
-                    applyExpanderStyles();
-                }
-            });
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        // Периодически проверяем и обновляем стили (на случай, если Streamlit перезаписывает их)
-        setInterval(applyExpanderStyles, 1000);
-    }
-    
-    // Запускаем функцию
-    fixExpanderColors();
-    </script>
-    """
-    
     # Применяем базовые стили шрифтов
     st.markdown(base_css, unsafe_allow_html=True)
     
@@ -401,9 +378,8 @@ def apply_custom_styles():
         st.markdown(dark_theme_css, unsafe_allow_html=True)
     else:
         st.markdown(light_theme_css, unsafe_allow_html=True)
-        # В светлой теме добавляем JavaScript для исправления цветов экспандеров
-        st.markdown(expander_js, unsafe_allow_html=True)
 
+# Остальные функции остаются без изменений
 def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     """Генерация данных согласно алгоритму из задания"""
     np.random.seed(random_state)
@@ -817,7 +793,7 @@ def main():
     theme_display = st.sidebar.radio(
         "🎨 Цветовая тема:",
         ["светлая", "тёмная"],
-        index=0 if st.session_state.theme == "light" else 1,
+        index=1 if st.session_state.theme == "dark" else 0,
         help="Выберите светлую или темную тему интерфейса"
     )
     
