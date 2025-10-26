@@ -28,44 +28,53 @@ if 'results' not in st.session_state:
 if 'all_data' not in st.session_state:
     st.session_state.all_data = None
 
+# Глобальная конфигурация размеров шрифта
+font_configs = {
+    "small": {
+        "base": "14px",
+        "h1": "28px",
+        "h2": "22px", 
+        "h3": "18px",
+        "body": "14px",
+        "small": "12px",
+        "metric": "13px",
+        "plot_title": 16,
+        "plot_axis": 12,
+        "plot_legend": 11
+    },
+    "medium": {
+        "base": "16px",
+        "h1": "32px",
+        "h2": "24px",
+        "h3": "20px", 
+        "body": "16px",
+        "small": "14px",
+        "metric": "15px",
+        "plot_title": 18,
+        "plot_axis": 14,
+        "plot_legend": 13
+    },
+    "large": {
+        "base": "18px",
+        "h1": "36px",
+        "h2": "28px",
+        "h3": "24px",
+        "body": "18px", 
+        "small": "16px",
+        "metric": "17px",
+        "plot_title": 20,
+        "plot_axis": 16,
+        "plot_legend": 15
+    }
+}
+
 # Функции для управления темой и размером текста
 def apply_custom_styles():
     """Применяет кастомные стили для темы и размера текста"""
     
-    # Определяем размеры для разных уровней текста
-    font_configs = {
-        "small": {
-            "base": "14px",
-            "h1": "28px",
-            "h2": "22px", 
-            "h3": "18px",
-            "body": "14px",
-            "small": "12px",
-            "metric": "13px"
-        },
-        "medium": {
-            "base": "16px",
-            "h1": "32px",
-            "h2": "24px",
-            "h3": "20px", 
-            "body": "16px",
-            "small": "14px",
-            "metric": "15px"
-        },
-        "large": {
-            "base": "18px",
-            "h1": "36px",
-            "h2": "28px",
-            "h3": "24px",
-            "body": "18px", 
-            "small": "16px",
-            "metric": "17px"
-        }
-    }
-    
     fs = font_configs[st.session_state.font_size]
     
-    # Базовые стили для светлой темы
+    # Базовые стили для шрифтов
     base_css = f"""
     <style>
         /* Базовые настройки шрифтов */
@@ -117,129 +126,190 @@ def apply_custom_styles():
     """
     
     # Стили для темной темы
-    dark_theme_css = """
+    dark_theme_css = f"""
     <style>
         /* Основные цвета темной темы */
-        .main {
+        .main {{
             background-color: #0E1117;
             color: #FAFAFA;
-        }
+        }}
         
-        .stApp {
+        .stApp {{
             background-color: #0E1117;
-        }
+        }}
         
         /* Сайдбар */
-        .css-1d391kg {
+        .css-1d391kg {{
             background-color: #262730;
-        }
+        }}
+        
+        /* Заголовки в сайдбаре - БЕЛЫЕ в темной теме */
+        .sidebar-header {{
+            color: #FAFAFA !important;
+            font-size: {fs['h2']} !important;
+        }}
         
         /* Текст */
-        .stMarkdown {
+        .stMarkdown {{
             color: #FAFAFA;
-        }
+        }}
         
-        h1, h2, h3, h4, h5, h6 {
+        h1, h2, h3, h4, h5, h6 {{
             color: #FAFAFA;
-        }
+        }}
+        
+        /* Вкладки - БЕЛЫЕ в темной теме */
+        .stTabs > div > button {{
+            background-color: #262730;
+            color: #FAFAFA !important;
+        }}
+        
+        .stTabs > div > button[aria-selected="true"] {{
+            background-color: #66B3FF;
+            color: #0E1117 !important;
+        }}
         
         /* Карточки и метрики */
-        .result-card {
+        .result-card {{
             background-color: #262730;
             color: #FAFAFA;
             border-left: 5px solid #66B3FF;
-        }
+        }}
         
-        .instruction-box {
+        .instruction-box {{
             background-color: #262730;
             color: #FAFAFA;
             border-left: 5px solid #66B3FF;
-        }
+        }}
         
-        .tooltip {
+        .tooltip {{
             background-color: #262730;
             color: #FAFAFA;
             border-left: 3px solid #66B3FF;
-        }
+        }}
+        
+        /* Expanders - видимые в темной теме */
+        .stExpander {{
+            border: 1px solid #66B3FF !important;
+            border-radius: 5px;
+        }}
+        
+        .stExpander > div > div {{
+            background-color: #262730 !important;
+            color: #FAFAFA !important;
+        }}
         
         /* Элементы форм */
-        .stSelectbox > div > div {
+        .stSelectbox > div > div {{
             background-color: #262730;
             color: #FAFAFA;
-        }
+        }}
         
-        .stMultiselect > div > div {
+        .stMultiselect > div > div {{
             background-color: #262730;
             color: #FAFAFA;
-        }
+        }}
         
-        .stTextInput > div > div > input {
+        .stTextInput > div > div > input {{
             background-color: #262730;
             color: #FAFAFA;
-        }
+        }}
         
-        .stSlider > div > div > div {
+        .stSlider > div > div > div {{
             color: #FAFAFA;
-        }
+        }}
         
-        /* Вкладки */
-        .stTabs > div > button {
-            background-color: #262730;
-            color: #FAFAFA;
-        }
-        
-        .stTabs > div > button[aria-selected="true"] {
-            background-color: #66B3FF;
-            color: #0E1117;
-        }
+        /* Метрики в темной теме */
+        .stMetric {{
+            color: #FAFAFA !important;
+        }}
+        [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{
+            color: #FAFAFA !important;
+        }}
     </style>
     """
     
     # Стили для светлой темы
-    light_theme_css = """
+    light_theme_css = f"""
     <style>
         /* Основные цвета светлой темы */
-        .main {
+        .main {{
             background-color: #FFFFFF;
             color: #31333F;
-        }
+        }}
         
-        .stApp {
+        .stApp {{
             background-color: #FFFFFF;
-        }
+        }}
         
-        /* Сайдбар */
-        .css-1d391kg {
-            background-color: #F0F2F6;
-        }
+        /* Сайдбар - ТЕМНЫЙ в светлой теме */
+        .css-1d391kg {{
+            background-color: #262730;
+        }}
+        
+        /* Заголовки в сайдбаре - БЕЛЫЕ в светлой теме (т.к. сайдбар темный) */
+        .sidebar-header {{
+            color: #FAFAFA !important;
+            font-size: {fs['h2']} !important;
+        }}
         
         /* Текст */
-        .stMarkdown {
+        .stMarkdown {{
             color: #31333F;
-        }
+        }}
         
-        h1, h2, h3, h4, h5, h6 {
+        h1, h2, h3, h4, h5, h6 {{
             color: #31333F;
-        }
+        }}
+        
+        /* Вкладки - ТЕМНЫЕ в светлой теме */
+        .stTabs > div > button {{
+            background-color: #F0F2F6;
+            color: #31333F !important;
+        }}
+        
+        .stTabs > div > button[aria-selected="true"] {{
+            background-color: #2E86AB;
+            color: #FFFFFF !important;
+        }}
         
         /* Карточки и метрики */
-        .result-card {
+        .result-card {{
             background-color: #F8F9FA;
             color: #31333F;
             border-left: 5px solid #2E86AB;
-        }
+        }}
         
-        .instruction-box {
+        .instruction-box {{
             background-color: #E8F4FD;
             color: #31333F;
             border-left: 5px solid #2E86AB;
-        }
+        }}
         
-        .tooltip {
+        .tooltip {{
             background-color: #F0F2F6;
             color: #31333F;
             border-left: 3px solid #2E86AB;
-        }
+        }}
+        
+        /* Expanders - видимые в светлой теме с темным текстом */
+        .stExpander {{
+            border: 1px solid #2E86AB !important;
+            border-radius: 5px;
+        }}
+        
+        .stExpander > div > div {{
+            background-color: #FFFFFF !important;
+            color: #31333F !important;
+        }}
+        
+        /* Метрики в светлой теме */
+        .stMetric {{
+            color: #31333F !important;
+        }}
+        [data-testid="stMetricValue"], [data-testid="stMetricLabel"] {{
+            color: #31333F !important;
+        }}
     </style>
     """
     
@@ -343,16 +413,47 @@ def create_scatter_plotly(P1, P2, P3, alpha, title):
         "<extra></extra>"
     ))
     
-    # Используем темную тему для Plotly если выбрана темная тема
-    template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+    # Используем темную тему для Plotly если выбрана темная тема, иначе светлую
+    if st.session_state.theme == "dark":
+        template = "plotly_dark"
+        font_color = "white"
+    else:
+        template = "plotly_white"
+        font_color = "black"
+    
+    # Получаем настройки шрифта для графиков
+    fs = font_configs[st.session_state.font_size]
     
     fig.update_layout(
         title=f"{title} (α={alpha})",
         xaxis_title="P1",
         yaxis_title="P2",
         template=template,
-        height=500
+        height=500,
+        font=dict(
+            size=fs['plot_axis'],
+            color=font_color
+        ),
+        title_font=dict(
+            size=fs['plot_title'],
+            color=font_color
+        ),
+        paper_bgcolor='white' if st.session_state.theme == "light" else 'rgba(0,0,0,0)',
+        plot_bgcolor='white' if st.session_state.theme == "light" else 'rgba(0,0,0,0)'
     )
+    
+    # Настраиваем цвета осей для светлой темы
+    if st.session_state.theme == "light":
+        fig.update_xaxes(
+            linecolor='black',
+            gridcolor='lightgray',
+            tickfont=dict(color='black')
+        )
+        fig.update_yaxes(
+            linecolor='black',
+            gridcolor='lightgray', 
+            tickfont=dict(color='black')
+        )
     
     return fig
 
@@ -390,18 +491,54 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
         name=f'Полином {degree}-й степени'
     ))
     
-    # Используем темную тему для Plotly если выбрана темная тема
-    template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+    # Используем темную тему для Plotly если выбрана темная тема, иначе светлую
+    if st.session_state.theme == "dark":
+        template = "plotly_dark"
+        font_color = "white"
+        bg_color = 'rgba(0,0,0,0)'
+    else:
+        template = "plotly_white"
+        font_color = "black"
+        bg_color = 'white'
+    
+    # Получаем настройки шрифта для графиков
+    fs = font_configs[st.session_state.font_size]
     
     fig.update_layout(
         title=f'Регрессионная модель П₃ = φ(П₁, П₂) (α={alpha}, степень={degree})',
         scene=dict(
             xaxis_title='P1',
             yaxis_title='P2', 
-            zaxis_title='P3'
+            zaxis_title='P3',
+            bgcolor=bg_color
         ),
         template=template,
-        height=600
+        height=600,
+        font=dict(
+            size=fs['plot_axis'],
+            color=font_color
+        ),
+        title_font=dict(
+            size=fs['plot_title'],
+            color=font_color
+        ),
+        paper_bgcolor=bg_color
+    )
+    
+    # Настраиваем шрифты для осей в 3D сцене
+    fig.update_scenes(
+        xaxis=dict(
+            title_font=dict(size=fs['plot_axis'], color=font_color),
+            tickfont=dict(size=fs['plot_legend'], color=font_color)
+        ),
+        yaxis=dict(
+            title_font=dict(size=fs['plot_axis'], color=font_color),
+            tickfont=dict(size=fs['plot_legend'], color=font_color)
+        ),
+        zaxis=dict(
+            title_font=dict(size=fs['plot_axis'], color=font_color),
+            tickfont=dict(size=fs['plot_legend'], color=font_color)
+        )
     )
     
     return fig
@@ -475,36 +612,103 @@ def add_mean_curves_to_scatter(fig, P1, P2, P3, row, col):
             ), row=row, col=col
         )
 
-def show_parameter_instructions():
-    """Показывает инструкцию по работе с параметрами эксперимента"""
-    st.markdown("""
-    <div class="instruction-box">
-    <h3>📋 Инструкция по работе с параметрами эксперимента</h3>
+def show_comprehensive_instructions():
+    """Показывает полную инструкцию по работе с приложением"""
     
-    <h4>Параметр α (уровень погрешности):</h4>
-    <ul>
-        <li><strong>α = 0</strong>: Идеальные измерения без погрешности</li>
-        <li><strong>α = 0.1</strong>: Очень высокая точность измерений</li>
-        <li><strong>α = 0.5</strong>: Средняя точность измерений</li>
-        <li><strong>α = 1.0</strong>: Стандартная погрешность (равна СКО распределения)</li>
-        <li><strong>α = 1.5</strong>: Высокая погрешность измерений</li>
-    </ul>
+    with st.expander("🎯 Цель лабораторной работы", expanded=False):
+        st.markdown("""
+        <div class="instruction-box">
+        <h3>🎯 Цель лабораторной работы</h3>
+        <p>Построение многомерной регрессионной зависимости П₃ = φ(П₁, П₂) на основе законов распределения 
+        трех параметров надежности с различной точностью регистрации данных.</p>
+        
+        <h3>🔧 Алгоритм работы</h3>
+        <ol>
+            <li><strong>Генерация случайных чисел</strong> ξ ∈ [0,1]</li>
+            <li><strong>Вычисление параметров</strong> через обратное преобразование распределений</li>
+            <li><strong>Добавление погрешности измерений</strong> ε_i ~ N(0, α·σ_i)</li>
+            <li><strong>Построение полей рассеяния</strong> и регрессионной модели</li>
+            <li><strong>Подбор порядка полинома</strong> по критерию Фишера</li>
+        </ol>
+        
+        <h3>📊 Распределения параметров</h3>
+        <ul>
+            <li><strong>F₁(П)</strong> = Равномерное [0,4]</li>
+            <li><strong>F₂(П)</strong> = Эрланга (форма=4, масштаб=1)</li>
+            <li><strong>F₃(П)</strong> = Нормальное N(0,3)</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
-    <h4>Количество прогонов:</h4>
-    <ul>
-        <li><strong>100-500</strong>: Быстрый расчет, подходит для тестирования</li>
-        <li><strong>500-1000</strong>: Оптимальный баланс скорости и точности</li>
-        <li><strong>1000-2000</strong>: Высокая точность, но дольше расчет</li>
-    </ul>
+    with st.expander("🎛️ Настройка параметров эксперимента", expanded=False):
+        st.markdown("""
+        <div class="instruction-box">
+        <h3>🎛️ Настройка параметров эксперимента</h3>
+        
+        <h4>Параметр α (уровень погрешности):</h4>
+        <ul>
+            <li><strong>α = 0</strong>: Идеальные измерения без погрешности</li>
+            <li><strong>α = 0.1</strong>: Очень высокая точность измерений</li>
+            <li><strong>α = 0.5</strong>: Средняя точность измерений</li>
+            <li><strong>α = 1.0</strong>: Стандартная погрешность (равна СКО распределения)</li>
+            <li><strong>α = 1.5</strong>: Высокая погрешность измерений</li>
+        </ul>
+        
+        <h4>Количество прогонов:</h4>
+        <ul>
+            <li><strong>100-500</strong>: Быстрый расчет, подходит для тестирования</li>
+            <li><strong>500-1000</strong>: Оптимальный баланс скорости и точности</li>
+            <li><strong>1000-2000</strong>: Высокая точность, но дольше расчет</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
     
-    <h4>Рекомендации:</h4>
-    <ul>
-        <li>Начните с α = [0.1, 0.5, 1.0] для сравнения разных уровней погрешности</li>
-        <li>Используйте 1000 прогонов для точных результатов</li>
-        <li>Для быстрого тестирования используйте 100-500 прогонов</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.expander("💡 Советы по использованию", expanded=False):
+        st.markdown("""
+        <div class="instruction-box">
+        <h3>💡 Советы по использованию</h3>
+        
+        <h4>Рекомендации по настройке:</h4>
+        <ul>
+            <li><strong>Начните с α = [0.1, 0.5, 1.0]</strong> для сравнения разных уровней погрешности</li>
+            <li><strong>Используйте 1000 прогонов</strong> для точных результатов</li>
+            <li><strong>Для быстрого тестирования</strong> используйте 100-500 прогонов</li>
+            <li><strong>Выбирайте несколько значений α</strong> для анализа влияния погрешности</li>
+        </ul>
+        
+        <h4>Интерпретация результатов:</h4>
+        <ul>
+            <li><strong>R² (коэффициент детерминации)</strong> показывает качество модели (ближе к 1 = лучше)</li>
+            <li><strong>Степень полинома</strong> показывает сложность регрессионной модели</li>
+            <li><strong>Общая дисперсия</strong> характеризует разброс данных</li>
+            <li><strong>Средние кривые</strong> на графиках показывают математическое ожидание зависимостей</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with st.expander("🧭 Навигация по разделам", expanded=False):
+        st.markdown("""
+        <div class="instruction-box">
+        <h3>🧭 Навигация по разделам</h3>
+        
+        <h4>Основные вкладки:</h4>
+        <ul>
+            <li><strong>📈 Основные результаты</strong> - ключевые метрики и общий анализ влияния погрешности</li>
+            <li><strong>🔄 Поля рассеяния</strong> - визуализация зависимостей между параметрами со средними кривыми</li>
+            <li><strong>🧮 Регрессионные модели</strong> - 3D визуализация регрессионных поверхностей</li>
+            <li><strong>📊 Исходные данные</strong> - таблицы данных, статистика и возможность скачивания</li>
+            <li><strong>📖 Инструкция</strong> - настоящее руководство по работе с приложением</li>
+        </ul>
+        
+        <h4>Особенности интерфейса:</h4>
+        <ul>
+            <li>Используйте <strong>настройки темы</strong> для комфортной работы при разном освещении</li>
+            <li>Регулируйте <strong>размер текста</strong> для удобства чтения</li>
+            <li>Все графики <strong>интерактивны</strong> - можно приближать, выделять области</li>
+            <li>Данные можно <strong>скачать в CSV</strong> для дальнейшего анализа</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Основной интерфейс
 def main():
@@ -512,7 +716,14 @@ def main():
     apply_custom_styles()
     
     # Настройки в сайдбаре
-    st.sidebar.markdown("## ⚙️ Настройки интерфейса")
+    st.sidebar.markdown('<div class="sidebar-header">⚙️ Настройки интерфейса</div>', unsafe_allow_html=True)
+    
+    # Словарь для отображения размеров текста на русском
+    font_size_options = {
+        "Маленький": "small",
+        "Средний": "medium", 
+        "Большой": "large"
+    }
     
     # Выбор темы
     theme = st.sidebar.radio(
@@ -526,28 +737,22 @@ def main():
         st.session_state.theme = theme
         st.rerun()
     
-    # Выбор размера текста
-    font_size = st.sidebar.selectbox(
+    # Выбор размера текста на русском языке
+    font_size_display = st.sidebar.selectbox(
         "🔤 Размер текста:",
-        ["small", "medium", "large"],
-        index=["small", "medium", "large"].index(st.session_state.font_size),
+        ["Маленький", "Средний", "Большой"],
+        index=["Маленький", "Средний", "Большой"].index(
+            next(key for key, value in font_size_options.items() if value == st.session_state.font_size)
+        ),
         help="Выберите удобный размер текста для чтения"
     )
     
-    if font_size != st.session_state.font_size:
-        st.session_state.font_size = font_size
+    if font_size_options[font_size_display] != st.session_state.font_size:
+        st.session_state.font_size = font_size_options[font_size_display]
         st.rerun()
     
     # Параметры эксперимента
-    st.sidebar.markdown("## 🧪 Параметры эксперимента")
-    
-    # Подсказки для параметров (свернуты по умолчанию)
-    with st.sidebar.expander("💡 Советы по настройке параметров", expanded=False):
-        st.markdown("""
-        <div class="tooltip">
-        💡 <strong>Совет:</strong> Выберите несколько значений α для сравнения влияния погрешности на результаты
-        </div>
-        """, unsafe_allow_html=True)
+    st.sidebar.markdown('<div class="sidebar-header">🧪 Параметры эксперимента</div>', unsafe_allow_html=True)
     
     num_samples = st.sidebar.slider(
         "Количество прогонов", 
@@ -562,48 +767,8 @@ def main():
         help="Уровень погрешности измерений. α=0 - без погрешности, α=1.0 - погрешность равна стандартному отклонению."
     )
     
-    # Инструкция по параметрам (свернута по умолчанию)
-    with st.sidebar.expander("📚 Инструкция по параметрам", expanded=False):
-        show_parameter_instructions()
-    
-    # Подсказки по навигации (свернуты по умолчанию)
-    with st.sidebar.expander("🧭 Навигация по разделам", expanded=False):
-        st.markdown("""
-        <div class="tooltip">
-        <strong>📈 Основные результаты</strong> - ключевые метрики и общий анализ
-        </div>
-        <div class="tooltip">
-        <strong>🔄 Поля рассеяния</strong> - визуализация зависимостей между параметрами
-        </div>
-        <div class="tooltip">
-        <strong>🧮 Регрессионные модели</strong> - 3D модели регрессионных поверхностей
-        </div>
-        <div class="tooltip">
-        <strong>📊 Исходные данные</strong> - таблицы данных и статистика
-        </div>
-        """, unsafe_allow_html=True)
-    
     # Заголовок
     st.markdown('<h1 style="text-align: center; margin-bottom: 2rem;">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
-    
-    # Описание задачи
-    with st.expander("📋 Описание лабораторной работы", expanded=True):
-        st.markdown("""
-        **Цель работы:** Построение многомерной регрессионной зависимости П₃ = φ(П₁, П₂) на основе законов распределения 
-        трех параметров надежности с различной точностью регистрации данных.
-        
-        **Алгоритм:**
-        1. Генерация случайных чисел ξ ∈ [0,1]
-        2. Вычисление параметров через обратное преобразование распределений
-        3. Добавление погрешности измерений ε_i ~ N(0, α·σ_i)
-        4. Построение полей рассеяния и регрессионной модели
-        5. Подбор порядка полинома по критерию Фишера
-        
-        **Распределения:** 
-        - F₁(П) = Равномерное [0,4]
-        - F₂(П) = Эрланга (форма=4, масштаб=1) 
-        - F₃(П) = Нормальное N(0,3)
-        """)
     
     if st.sidebar.button("🚀 Запустить расчет", type="primary"):
         if not alphas:
@@ -669,8 +834,8 @@ def main():
             'Общая дисперсия': r['total_variance']
         } for r in results])
         
-        # Вкладки для разных разделов
-        tab1, tab2, tab3, tab4 = st.tabs(["📈 Основные результаты", "🔄 Поля рассеяния", "🧮 Регрессионные модели", "📊 Исходные данные"])
+        # Вкладки для разных разделов (добавлена вкладка с инструкцией)
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Основные результаты", "🔄 Поля рассеяния", "🧮 Регрессионные модели", "📊 Исходные данные", "📖 Инструкция"])
         
         with tab1:
             st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Основные метрики</h2>', unsafe_allow_html=True)
@@ -697,8 +862,18 @@ def main():
             # График зависимости R² от α
             st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Влияние погрешности на качество модели</h2>', unsafe_allow_html=True)
             
-            # Используем темную тему для Plotly если выбрана темная тема
-            template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+            # Используем темную тему для Plotly если выбрана темная тема, иначе светлую
+            if st.session_state.theme == "dark":
+                template = "plotly_dark"
+                font_color = "white"
+                bg_color = 'rgba(0,0,0,0)'
+            else:
+                template = "plotly_white"
+                font_color = "black"
+                bg_color = 'white'
+            
+            # Получаем настройки шрифта для графиков
+            fs = font_configs[st.session_state.font_size]
             
             fig_r2 = go.Figure()
             fig_r2.add_trace(go.Scatter(
@@ -714,8 +889,39 @@ def main():
                 xaxis_title="α",
                 yaxis_title="R²",
                 template=template,
-                height=400
+                height=400,
+                font=dict(
+                    size=fs['plot_axis'],
+                    color=font_color
+                ),
+                title_font=dict(
+                    size=fs['plot_title'],
+                    color=font_color
+                ),
+                xaxis=dict(
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend'])
+                ),
+                yaxis=dict(
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend'])
+                ),
+                paper_bgcolor=bg_color,
+                plot_bgcolor=bg_color
             )
+            
+            # Настраиваем цвета осей для светлой темы
+            if st.session_state.theme == "light":
+                fig_r2.update_xaxes(
+                    linecolor='black',
+                    gridcolor='lightgray',
+                    tickfont=dict(color='black')
+                )
+                fig_r2.update_yaxes(
+                    linecolor='black',
+                    gridcolor='lightgray', 
+                    tickfont=dict(color='black')
+                )
             
             st.plotly_chart(fig_r2, use_container_width=True)
             
@@ -836,23 +1042,91 @@ def main():
                     row=1, col=3
                 )
                 
-                # Используем темную тему для Plotly если выбрана темная тема
-                template = "plotly_dark" if st.session_state.theme == "dark" else "plotly_white"
+                # Используем темную тему для Plotly если выбрана темная тема, иначе светлую
+                if st.session_state.theme == "dark":
+                    template = "plotly_dark"
+                    font_color = "white"
+                    bg_color = 'rgba(0,0,0,0)'
+                else:
+                    template = "plotly_white"
+                    font_color = "black"
+                    bg_color = 'white'
+                
+                # Получаем настройки шрифта для графиков
+                fs = font_configs[st.session_state.font_size]
                 
                 fig_scatter.update_layout(
                     height=500, 
                     showlegend=False,
                     title_text=f"Поля рассеяния со средними кривыми (α={alpha})",
-                    template=template
+                    template=template,
+                    font=dict(
+                        size=fs['plot_axis'],
+                        color=font_color
+                    ),
+                    title_font=dict(
+                        size=fs['plot_title'],
+                        color=font_color
+                    ),
+                    paper_bgcolor=bg_color,
+                    plot_bgcolor=bg_color
                 )
                 
+                # Обновляем шрифты для заголовков подграфиков
+                fig_scatter.update_annotations(font_size=fs['plot_axis'])
+                
                 # Настраиваем подписи осей
-                fig_scatter.update_xaxes(title_text="P1", row=1, col=1)
-                fig_scatter.update_xaxes(title_text="P1", row=1, col=2)
-                fig_scatter.update_xaxes(title_text="P2", row=1, col=3)
-                fig_scatter.update_yaxes(title_text="P2", row=1, col=1)
-                fig_scatter.update_yaxes(title_text="P3", row=1, col=2)
-                fig_scatter.update_yaxes(title_text="P3", row=1, col=3)
+                fig_scatter.update_xaxes(
+                    title_text="P1", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend'])
+                )
+                fig_scatter.update_xaxes(
+                    title_text="P1", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend']),
+                    row=1, col=2
+                )
+                fig_scatter.update_xaxes(
+                    title_text="P2", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend']),
+                    row=1, col=3
+                )
+                fig_scatter.update_yaxes(
+                    title_text="P2", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend']),
+                    row=1, col=1
+                )
+                fig_scatter.update_yaxes(
+                    title_text="P3", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend']),
+                    row=1, col=2
+                )
+                fig_scatter.update_yaxes(
+                    title_text="P3", 
+                    title_font=dict(size=fs['plot_axis']),
+                    tickfont=dict(size=fs['plot_legend']),
+                    row=1, col=3
+                )
+                
+                # Настраиваем цвета осей для светлой темы
+                if st.session_state.theme == "light":
+                    for i in range(1, 4):
+                        fig_scatter.update_xaxes(
+                            linecolor='black',
+                            gridcolor='lightgray',
+                            tickfont=dict(color='black'),
+                            row=1, col=i
+                        )
+                        fig_scatter.update_yaxes(
+                            linecolor='black',
+                            gridcolor='lightgray', 
+                            tickfont=dict(color='black'),
+                            row=1, col=i
+                        )
                 
                 st.plotly_chart(fig_scatter, use_container_width=True)
                 
@@ -927,41 +1201,15 @@ def main():
                 'P2': ['mean', 'std', 'min', 'max'], 
                 'P3': ['mean', 'std', 'min', 'max']
             }).round(4))
+        
+        with tab5:
+            show_comprehensive_instructions()
     
     else:
-        # Инструкция при первом запуске
+        # Если расчеты еще не проводились, показываем инструкцию на главной
+        show_comprehensive_instructions()
+        
         st.info("👈 Выберите параметры в боковой панели и нажмите 'Запустить расчет' для начала анализа")
-
-# Глобальная конфигурация размеров шрифта
-font_configs = {
-    "small": {
-        "base": "14px",
-        "h1": "28px",
-        "h2": "22px", 
-        "h3": "18px",
-        "body": "14px",
-        "small": "12px",
-        "metric": "13px"
-    },
-    "medium": {
-        "base": "16px",
-        "h1": "32px",
-        "h2": "24px",
-        "h3": "20px", 
-        "body": "16px",
-        "small": "14px",
-        "metric": "15px"
-    },
-    "large": {
-        "base": "18px",
-        "h1": "36px",
-        "h2": "28px",
-        "h3": "24px",
-        "body": "18px", 
-        "small": "16px",
-        "metric": "17px"
-    }
-}
 
 if __name__ == "__main__":
     main()
