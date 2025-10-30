@@ -20,7 +20,7 @@ st.set_page_config(
 
 # Инициализация session_state
 if 'theme' not in st.session_state:
-    st.session_state.theme = "dark"  # По умолчанию светлая тема
+    st.session_state.theme = "light"
 if 'font_size' not in st.session_state:
     st.session_state.font_size = "medium"
 if 'results' not in st.session_state:
@@ -379,43 +379,63 @@ def apply_custom_styles():
     else:
         st.markdown(light_theme_css, unsafe_allow_html=True)
 
-# Остальные функции остаются без изменений
+def validate_data_ranges(P1, P2, P3, alpha):
+    """Проверка корректности диапазонов данных"""
+    ranges_info = f"α={alpha}: P1∈[{P1.min():.2f}, {P1.max():.2f}], P2∈[{P2.min():.2f}, {P2.max():.2f}], P3∈[{P3.min():.2f}, {P3.max():.2f}]"
+    
+    # Для α=0.1 P3 должен быть примерно в [-9, 9]
+    if alpha == 0.1 and (P3.min() < -15 or P3.max() > 15):
+        st.warning(f"⚠️ ВНИМАНИЕ: P3 выходит за ожидаемый диапазон для α=0.1!")
+    
+    return ranges_info
+
 def generate_reliability_data(alpha, num_samples=1000, random_state=42):
-    """Генерация данных согласно алгоритму из задания"""
+    """КОРРЕКТНАЯ генерация данных согласно алгоритму из задания"""
     np.random.seed(random_state)
     
-    # 1. Генерация ξ ∈ [0,1]
-    xi = np.random.uniform(0, 1, num_samples)
+    # 1. Генерация ξ ∈ [0,1] с избеганием крайних значений
+    xi = np.random.uniform(0.001, 0.999, num_samples)
     
-    # 2. Обратное преобразование для заданных распределений
-    P1_base = uniform.ppf(xi, loc=0, scale=4)          # Равномерное [0,4]
-    P2_base = erlang.ppf(xi, 4, scale=1)               # Эрланга (форма=4, масштаб=1)
-    P3_base = norm.ppf(xi, loc=0, scale=3)             # Нормальное N(0,3)
+    # 2. Обратное преобразование для интегральных функций распределения
+    # F₁(П) = Равномерное [0,4]
+    P1_base = uniform.ppf(xi, loc=0, scale=4)
     
-    # Расчет σ_i для каждого распределения
-    sigma1 = np.sqrt(4**2 / 12)   # СКО равномерного [0,4]
-    sigma2 = np.sqrt(4 * 1**2)    # СКО распределения Эрланга
-    sigma3 = 3                    # СКО нормального распределения
+    # F₂(П) = Эрланга (форма=4, масштаб=1)
+    P2_base = erlang.ppf(xi, 4, scale=1)
     
-    # Добавление погрешности ε_i ~ N(0, α*σ_i)
+    # F₃(П) = Нормальное N(0,3)
+    P3_base = norm.ppf(xi, loc=0, scale=3)
+    
+    # 3. Расчет σ_i для каждого распределения
+    sigma1 = 4 / np.sqrt(12)                    # СКО равномерного [0,4]
+    sigma2 = np.sqrt(4)                         # СКО распределения Эрланга
+    sigma3 = 3                                  # СКО нормального распределения
+    
+    # 4. Добавление погрешности ε_i ~ N(0, α*σ_i)
     epsilon1 = norm.rvs(loc=0, scale=alpha * sigma1, size=num_samples)
     epsilon2 = norm.rvs(loc=0, scale=alpha * sigma2, size=num_samples)
     epsilon3 = norm.rvs(loc=0, scale=alpha * sigma3, size=num_samples)
     
     P1 = P1_base + epsilon1
-    P2 = P2_base + epsilon2
+    P2 = P2_base + epsilon2  
     P3 = P3_base + epsilon3
+    
+    # Валидация диапазонов
+    validate_data_ranges(P1, P2, P3, alpha)
     
     return P1, P2, P3
 
 def f_test_comparison(rss_simple, rss_complex, df_simple, df_complex, n_samples, alpha=0.05):
     """Критерий Фишера для сравнения моделей"""
+    if rss_complex == 0 or (n_samples - df_complex - 1) <= 0:
+        return 0, 1, False
+        
     f_stat = ((rss_simple - rss_complex) / (df_complex - df_simple)) / (rss_complex / (n_samples - df_complex - 1))
     p_value = 1 - f.cdf(f_stat, df_complex - df_simple, n_samples - df_complex - 1)
     return f_stat, p_value, p_value < alpha
 
-def select_polynomial_degree(X, y, max_degree=5):
-    """Подбор порядка полинома на основе критерия Фишера"""
+def select_polynomial_degree(X, y, max_degree=3):
+    """Улучшенный подбор порядка полинома с ограничением для монотонности"""
     n_samples = len(y)
     best_degree = 1
     models = {}
@@ -423,28 +443,33 @@ def select_polynomial_degree(X, y, max_degree=5):
     
     for degree in range(1, max_degree + 1):
         model = Pipeline([
-            ('poly', PolynomialFeatures(degree=degree)),
+            ('poly', PolynomialFeatures(degree=degree, include_bias=False)),
             ('linear', LinearRegression())
         ])
         model.fit(X, y)
         y_pred = model.predict(X)
         rss = np.sum((y - y_pred)**2)
-        n_params = PolynomialFeatures(degree=degree).fit_transform(X).shape[1]
+        n_params = PolynomialFeatures(degree=degree, include_bias=False).fit_transform(X).shape[1]
         
         models[degree] = model
         rss_values[degree] = (rss, n_params)
     
-    # Критерий Фишера: последовательное сравнение моделей
+    # Критерий Фишера с проверкой на переобучение
+    best_degree = 1
     for degree in range(2, max_degree + 1):
         rss_prev, df_prev = rss_values[degree-1]
         rss_curr, df_curr = rss_values[degree]
         
-        f_stat, p_value, significant = f_test_comparison(
-            rss_prev, rss_curr, df_prev, df_curr, n_samples
-        )
-        
-        if significant:
-            best_degree = degree
+        # Проверка на значимое улучшение
+        if (rss_prev - rss_curr) > 0:
+            f_stat, p_value, significant = f_test_comparison(
+                rss_prev, rss_curr, df_prev, df_curr, n_samples
+            )
+            
+            if significant:
+                best_degree = degree
+            else:
+                break
         else:
             break
     
@@ -859,7 +884,7 @@ def main():
                     X = np.column_stack((P1, P2))
                     y = P3
                     
-                    best_degree, best_model = select_polynomial_degree(X, y, max_degree=5)
+                    best_degree, best_model = select_polynomial_degree(X, y, max_degree=3)
                     
                     # Оценка качества модели
                     y_pred = best_model.predict(X)
@@ -995,12 +1020,19 @@ def main():
             # Анализ результатов
             st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">Анализ результатов</h2>', unsafe_allow_html=True)
             
+            # Показываем диапазоны данных
+            st.markdown("**Проверка диапазонов данных:**")
+            for result in results:
+                ranges_info = validate_data_ranges(result['P1'], result['P2'], result['P3'], result['alpha'])
+                st.text(ranges_info)
+            
             analysis_text = """
             **Наблюдаемые закономерности:**
             - С увеличением α (погрешности измерений) качество модели R² закономерно снижается
             - При малых α критерий Фишера выбирает более сложные модели (высокие степени полиномов)
             - При больших α выбираются простые модели для избежания переобучения
             - Общая дисперсия данных растет с увеличением α
+            - Для α=0.1 значения P3 должны находиться в диапазоне примерно [-9, 9]
             """
             
             st.markdown(analysis_text)
