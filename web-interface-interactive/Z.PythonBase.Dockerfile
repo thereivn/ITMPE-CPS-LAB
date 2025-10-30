@@ -1,5 +1,4 @@
-FROM python:3.9 AS base
-
+FROM python:3.9
 WORKDIR /app
 # Устанавливаем системные зависимости для matplotlib, plotly и scipy
 RUN apt-get update && apt-get install -y \
@@ -11,9 +10,3 @@ RUN apt-get update && apt-get install -y \
 # Копируем и устанавливаем зависимости из requirements.txt
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Продолжаем на основе собранной базы
-FROM base
-COPY main.py /app/
-EXPOSE 8501
-CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]
