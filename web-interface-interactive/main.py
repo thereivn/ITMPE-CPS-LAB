@@ -416,8 +416,13 @@ def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     
     # 3. Расчет σ_i для каждого распределения
     sigma1 = 4 / np.sqrt(12)                    # СКО равномерного [0,4]
-    sigma2 = 2                                  # СКО распределения Эрланга с k=4, θ=1
+    sigma2 = np.sqrt(4)                         # СКО распределения Эрланга с k=4, θ=1
     sigma3 = 3                                  # СКО нормального распределения
+
+    # Ограничиваем экстремальные значения
+    P1_base = np.clip(P1_base, 0, 4)  # Практический максимум равномерного
+    P2_base = np.clip(P2_base, 0, 9) # Практический максимум Эрланга(4,1)
+    P3_base = np.clip(P3_base, -9, 9)  # Практический максимум равномерного
     
     # 4. Добавление погрешности ε_i ~ N(0, α*σ_i)
     epsilon1 = norm.rvs(loc=0, scale=alpha * sigma1, size=num_samples)
@@ -427,6 +432,10 @@ def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     P1 = P1_base + epsilon1
     P2 = P2_base + epsilon2  
     P3 = P3_base + epsilon3
+    
+    # Ограничение, удаление явных выбросов, установка разумных значений
+    # P2_max_reasonable = 9 + 3 * alpha * sigma2
+    # P2 = np.clip(P2, -1, P2_max_reasonable)
     
     return P1, P2, P3
 
