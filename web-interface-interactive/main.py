@@ -6,6 +6,9 @@ from scipy.stats import erlang, norm, uniform, f
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import train_test_split
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -433,10 +436,6 @@ def generate_reliability_data(alpha, num_samples=1000, random_state=42):
     P2 = P2_base + epsilon2  
     P3 = P3_base + epsilon3
     
-    # Ограничение, удаление явных выбросов, установка разумных значений
-    # P2_max_reasonable = 9 + 3 * alpha * sigma2
-    # P2 = np.clip(P2, -1, P2_max_reasonable)
-    
     return P1, P2, P3
 
 def f_test_comparison(rss_simple, rss_complex, df_simple, df_complex, n_samples, alpha=0.05):
@@ -448,7 +447,7 @@ def f_test_comparison(rss_simple, rss_complex, df_simple, df_complex, n_samples,
     p_value = 1 - f.cdf(f_stat, df_complex - df_simple, n_samples - df_complex - 1)
     return f_stat, p_value, p_value < alpha
 
-def select_polynomial_degree(X, y, max_degree=2):
+def select_polynomial_degree(X, y, max_degree=4):
     """Улучшенный подбор порядка полинома с ограничением для монотонности"""
     n_samples = len(y)
     best_degree = 1
@@ -488,6 +487,32 @@ def select_polynomial_degree(X, y, max_degree=2):
             break
     
     return best_degree, models[best_degree]
+
+def create_complex_regression_model(X, y, model_type='polynomial', degree=4):
+    """Создание сложной регрессионной модели для отображения неровностей"""
+    if model_type == 'polynomial':
+        model = Pipeline([
+            ('poly', PolynomialFeatures(degree=degree, include_bias=False)),
+            ('linear', LinearRegression())
+        ])
+    elif model_type == 'random_forest':
+        model = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=10,
+            min_samples_split=5,
+            random_state=42
+        )
+    elif model_type == 'neural_network':
+        model = MLPRegressor(
+            hidden_layer_sizes=(50, 30, 20),
+            activation='tanh',
+            solver='adam',
+            max_iter=1000,
+            random_state=42
+        )
+    
+    model.fit(X, y)
+    return model
 
 def create_scatter_plotly(P1, P2, P3, alpha, title):
     """Создание интерактивного поля рассеяния"""
@@ -554,31 +579,28 @@ def create_scatter_plotly(P1, P2, P3, alpha, title):
     
     return fig
 
-def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
-    """Создание 3D визуализации регрессионной поверхности с ограничением экстраполяции"""
-    # Создаем сетку для предсказаний с небольшим отступом от границ данных
+def create_3d_regression_plot(P1, P2, P3, model, alpha, degree, model_type='polynomial'):
+    """Создание 3D визуализации регрессионной поверхности с неровностями"""
+    # Создаем более детальную сетку для лучшего отображения неровностей
     P1_min, P1_max = P1.min(), P1.max()
     P2_min, P2_max = P2.min(), P2.max()
     
-    # Добавляем небольшой отступ (5%) чтобы избежать экстремальных значений на границах
-    P1_padding = (P1_max - P1_min) * 0.05
-    P2_padding = (P2_max - P2_min) * 0.05
+    # Увеличиваем разрешение сетки для лучшего отображения деталей
+    grid_points = 40  # Увеличиваем с 20 до 40 для большей детализации
     
-    P1_range = np.linspace(P1_min + P1_padding, P1_max - P1_padding, 20)
-    P2_range = np.linspace(P2_min + P2_padding, P2_max - P2_padding, 20)
+    P1_range = np.linspace(P1_min, P1_max, grid_points)
+    P2_range = np.linspace(P2_min, P2_max, grid_points)
     P1_grid, P2_grid = np.meshgrid(P1_range, P2_range)
     
     # Предсказания на сетке
-    grid_points = np.column_stack((P1_grid.ravel(), P2_grid.ravel()))
-    P3_pred_grid = model.predict(grid_points).reshape(P1_grid.shape)
+    grid_points_flat = np.column_stack((P1_grid.ravel(), P2_grid.ravel()))
     
-    # ОГРАНИЧЕНИЕ: Не позволяем поверхности выходить за разумные пределы
-    # Основано на статистике исходных данных P3
-    # P3_mean, P3_std = np.mean(P3), np.std(P3)
-    # reasonable_min = P3_mean - 3 * P3_std  # 3 сигмы вниз
-    # reasonable_max = P3_mean + 3 * P3_std  # 3 сигмы вверх
-    
-    # P3_pred_grid = np.clip(P3_pred_grid, reasonable_min, reasonable_max)
+    # Для разных типов моделей используем разные подходы к предсказанию
+    if hasattr(model, 'predict'):
+        P3_pred_grid = model.predict(grid_points_flat).reshape(P1_grid.shape)
+    else:
+        # Для полиномиальных моделей из pipeline
+        P3_pred_grid = model.predict(grid_points_flat).reshape(P1_grid.shape)
     
     fig = go.Figure()
     
@@ -595,13 +617,24 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
         name='Исходные данные'
     ))
     
-    # Добавляем регрессионную поверхность
+    # Добавляем регрессионную поверхность с настройками для лучшего отображения неровностей
     fig.add_trace(go.Surface(
         x=P1_grid, y=P2_grid, z=P3_pred_grid,
         colorscale='Plasma',
-        opacity=0.7,
-        name=f'Полином {degree}-й степени',
-        showscale=False
+        opacity=0.8,
+        name=f'Модель ({model_type})',
+        showscale=False,
+        lighting=dict(
+            diffuse=0.8,
+            ambient=0.3,
+            specular=0.1,
+            roughness=0.3
+        ),
+        lightposition=dict(
+            x=100,
+            y=100,
+            z=1000
+        )
     ))
     
     # Используем темную тему для Plotly если выбрана темная тема, иначе светлую
@@ -618,14 +651,15 @@ def create_3d_regression_plot(P1, P2, P3, model, alpha, degree):
     fs = font_configs[st.session_state.font_size]
     
     fig.update_layout(
-        title=f'Регрессионная модель П₃ = φ(П₁, П₂) (α={alpha}, степень={degree})',
+        title=f'Регрессионная модель П₃ = φ(П₁, П₂) (α={alpha}, тип={model_type})',
         scene=dict(
             xaxis_title='P1',
             yaxis_title='P2', 
             zaxis_title='P3',
             bgcolor=bg_color,
-            # Устанавливаем разумные пределы для оси Z на основе данных
-            # zaxis=dict(range=[reasonable_min, reasonable_max])
+            camera=dict(
+                eye=dict(x=1.5, y=1.5, z=1.5)  # Изменяем угол обзора для лучшего вида неровностей
+            )
         ),
         template=template,
         height=600,
@@ -837,6 +871,26 @@ def main():
         help="Уровень погрешности измерений. α=0 - без погрешности, α=1.0 - погрешность равна стандартному отклонению."
     )
     
+    # НОВЫЙ ПАРАМЕТР: Выбор типа модели
+    model_type = st.sidebar.selectbox(
+        "Тип регрессионной модели:",
+        ["polynomial", "random_forest", "neural_network"],
+        format_func=lambda x: {
+            "polynomial": "Полиномиальная регрессия", 
+            "random_forest": "Случайный лес",
+            "neural_network": "Нейронная сеть"
+        }[x],
+        help="Выберите тип модели для построения регрессионной поверхности"
+    )
+    
+    # Дополнительные настройки для полиномиальной регрессии
+    if model_type == "polynomial":
+        max_degree = st.sidebar.slider(
+            "Максимальная степень полинома", 
+            2, 6, 4,
+            help="Максимальная степень полинома для регрессионной модели"
+        )
+    
     # Заголовок
     st.markdown('<h1 style="text-align: center; margin-bottom: 2rem;">📊 Анализ многомерных характеристик надежности</h1>', unsafe_allow_html=True)
     
@@ -862,7 +916,13 @@ def main():
                     X = np.column_stack((P1, P2))
                     y = P3
                     
-                    best_degree, best_model = select_polynomial_degree(X, y, max_degree=2)
+                    if model_type == "polynomial":
+                        best_degree, best_model = select_polynomial_degree(X, y, max_degree=max_degree)
+                        model_info = f"Полином {best_degree}-й степени"
+                    else:
+                        best_model = create_complex_regression_model(X, y, model_type)
+                        best_degree = "N/A"
+                        model_info = model_type
                     
                     # Оценка качества модели
                     y_pred = best_model.predict(X)
@@ -875,12 +935,14 @@ def main():
                     results.append({
                         'alpha': alpha,
                         'best_degree': best_degree,
+                        'model_info': model_info,
                         'r2_score': r2,
                         'total_variance': total_variance,
                         'model': best_model,
                         'P1': P1,
                         'P2': P2, 
-                        'P3': P3
+                        'P3': P3,
+                        'model_type': model_type
                     })
                     
                     progress_bar.progress((i + 1) / len(alphas))
@@ -899,7 +961,7 @@ def main():
         # Создаем DataFrame с результатами
         df_results = pd.DataFrame([{
             'α': r['alpha'],
-            'Степень полинома': r['best_degree'], 
+            'Модель': r['model_info'], 
             'R²': r['r2_score'],
             'Общая дисперсия': r['total_variance']
         } for r in results])
@@ -923,7 +985,7 @@ def main():
                     st.markdown(f"""
                     <div style="background: {gradient}; color: white; padding: 1rem; border-radius: 10px; text-align: center; font-size: {font_configs[st.session_state.font_size]['metric']}px;">
                         <h3>α = {result['alpha']}</h3>
-                        <h4>Степень: {result['best_degree']}</h4>
+                        <h4>{result['model_info']}</h4>
                         <p>R² = {result['r2_score']:.4f}</p>
                         <p>Дисперсия = {result['total_variance']:.2f}</p>
                     </div>
@@ -1005,12 +1067,18 @@ def main():
                 st.text(ranges_info)
                 st.markdown(explanation)
 
-            analysis_text = """
+            analysis_text = f"""
             **Наблюдаемые закономерности:**
+            - Используемая модель: **{model_type}**
             - С увеличением α (погрешности измерений) качество модели R² закономерно снижается
-            - При малых α критерий Фишера выбирает более сложные модели (высокие степени полиномов)
-            - При больших α выбираются простые модели для избежания переобучения
+            - Более сложные модели лучше capture сложные зависимости и "бугорки" в данных
+            - При больших α выбираются более простые модели для избежания переобучения
             - Общая дисперсия данных растет с увеличением α
+
+            **Особенности регрессионной поверхности:**
+            - **Полиномиальная регрессия**: создает гладкие поверхности, степень полинома влияет на сложность
+            - **Случайный лес**: создает поверхность с "ступеньками" и неровностями
+            - **Нейронная сеть**: создает наиболее сложные поверхности с выраженными "бугорками"
 
             **Физический смысл расширения диапазонов:**
             - Параметр α характеризует точность измерений
@@ -1217,16 +1285,25 @@ def main():
         
         with tab3:
             st.markdown('<h2 style="border-bottom: 2px solid; padding-bottom: 0.5rem; margin-top: 2rem;">3D визуализация регрессионных моделей</h2>', unsafe_allow_html=True)
+            st.markdown("""
+            **Пояснение к графикам:**
+            - **Синие точки**: исходные данные измерений
+            - **Цветная поверхность**: регрессионная модель П₃ = φ(П₁, П₂)
+            - **Неровности поверхности**: отражают сложные зависимости между параметрами
+            - **Чем больше α**: тем более выражены неровности из-за увеличения погрешности
+            """)
             
             for result in results:
                 alpha = result['alpha']
-                degree = result['best_degree']
+                model_type = result['model_type']
                 
-                st.markdown(f"### Регрессионная модель для α = {alpha}")
+                st.markdown(f"### Регрессионная модель для α = {alpha} ({result['model_info']})")
                 
                 fig_3d = create_3d_regression_plot(
                     result['P1'], result['P2'], result['P3'],
-                    result['model'], alpha, degree
+                    result['model'], alpha, 
+                    result.get('best_degree', 'N/A'),
+                    model_type
                 )
                 
                 st.plotly_chart(fig_3d, use_container_width=True)
@@ -1234,7 +1311,7 @@ def main():
                 # Информация о модели
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Степень полинома", degree)
+                    st.metric("Тип модели", result['model_info'])
                 with col2:
                     st.metric("R²", f"{result['r2_score']:.4f}")
                 with col3:
